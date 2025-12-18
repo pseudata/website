@@ -17,20 +17,20 @@ These are all fantastic libraries. They all allow deterministic seeding.
 
 **But they are all different.**
 
-Seeding `faker.js` with `123` and `Faker` (Python) with `123` results in two completely different realities. The frontend expects "Alice," but the backend returns "Bob."
+Seeding `faker.js` with `42` and `Faker` (Python) with `42` results in two completely different realities. The frontend expects "Alice," but the backend returns "Bob."
 
 ```python
 # Python backend (Faker)
 from faker import Faker
 fake = Faker()
-Faker.seed(123)
+Faker.seed(42)
 print(fake.name())  # → "Brett Davis"
 ```
 
 ```typescript
 // TypeScript frontend (faker.js)
 import { faker } from "@faker-js/faker";
-faker.seed(123);
+faker.seed(42);
 console.log(faker.person.fullName()); // → "Miss Dora Kiehn"
 ```
 

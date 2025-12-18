@@ -1,0 +1,110 @@
+---
+title: Pseudata
+description: Deterministic mock data generation across all programming languages
+template: splash
+hero:
+  tagline: One seed. Every language. Same data.
+  actions:
+    - text: Get Started
+      link: /guides/get-started/
+      icon: right-arrow
+      variant: primary
+    - text: Concept
+      link: /reference/concept/
+      icon: open-book
+      variant: secondary
+    - text: GitHub
+      link: https://github.com/pseudata/pseudata
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid, Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Stop Fighting Inconsistent Test Data
+
+Your frontend expects Alice. Your backend returns Bob.  
+**Different faker libraries = Different realities.**
+
+Pseudata solves this by making mock data generation a standardized algorithm—not a language-specific implementation.
+
+**📖 [Read the full story: Why faker.js and Faker Don't Agree](/blog/introduction/)**
+
+## Key Features
+
+<CardGrid>
+  <Card title="Cross-Language Consistency" icon="approve-check">
+    Same seed = same data across all languages. No more integration test mismatches.
+  </Card>
+  <Card title="Infinite Scale" icon="rocket">
+    O(1) instant access to billions of records. Zero memory overhead—virtual arrays calculate on demand.
+  </Card>
+  <Card title="Multi-Locale Support" icon="translate">
+    15+ locales with culturally appropriate names, addresses, and geographic data.
+  </Card>
+  <Card title="Zero Dependencies" icon="puzzle">
+    Pure implementation in every language. No FFI, no bindings, just native code.
+  </Card>
+</CardGrid>
+
+## Same Seed, Same Data
+
+`User[1000]` with seed `42` = **Always** the same:
+
+- Same name
+- Same email
+- Same avatar
+- **Every time. Every language.**
+
+![Diagram showing seed 42 flowing to Go, Java, Python, and TypeScript implementations, all producing identical output: John Smith](/images/consistency-diagram.svg)
+
+<Tabs>
+  <TabItem label="Go">
+    ```go
+    package main
+    import "github.com/pseudata/pseudata"
+
+    users := pseudata.NewUserArray(42)
+    user := users.At(1000)
+    fmt.Println(user.Name)  // → "John Smith"
+    fmt.Println(user.Email) // → "john.smith@example.com"
+    ```
+
+  </TabItem>
+  
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+
+    UserArray users = new UserArray(42);
+    User user = users.at(1000);
+    System.out.println(user.getName());  // → "John Smith"
+    System.out.println(user.getEmail()); // → "john.smith@example.com"
+    ```
+
+  </TabItem>
+  
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray
+
+    users = UserArray(42)
+    user = users.at(1000)
+    print(user.name)  # → "John Smith"
+    print(user.email) # → "john.smith@example.com"
+    ```
+
+  </TabItem>
+  
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray } from "pseudata";
+
+    const users = new UserArray(42);
+    const user = users.at(1000);
+    console.log(user.name);  // → "John Smith"
+    console.log(user.email); // → "john.smith@example.com"
+    ```
+
+  </TabItem>
+</Tabs>

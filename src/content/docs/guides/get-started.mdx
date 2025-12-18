@@ -1,0 +1,158 @@
+---
+title: "Get Started"
+description: "Quick start guide to understanding and using Pseudata for cross-language mock data generation"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## What is Pseudata?
+
+Pseudata is a deterministic mock data generator that produces **identical results across all programming languages**.
+
+Unlike traditional faker libraries where `seed(42)` in Python gives you different data than `seed(42)` in JavaScript, Pseudata guarantees mathematical consistency.
+
+## The Core Problem
+
+Modern polyglot stacks face a critical testing challenge:
+
+```bash
+# Python backend
+Faker.seed(42)
+user = fake.name()  # → "Alice Johnson"
+
+# JavaScript frontend
+faker.seed(42)
+user = faker.name()  # → "Bob Smith"
+```
+
+**Different libraries = Different data = Broken integration tests**
+
+## How Pseudata Solves This
+
+Pseudata uses the **PCG32 algorithm** (Permuted Congruential Generator) as its mathematical foundation. Unlike traditional faker libraries that rely on language-specific random number generators, PCG32 is a standardized algorithm that produces identical sequences across all implementations.
+
+This means: Given the same seed, PCG32 generates the exact same sequence of numbers in Go, Java, Python, and TypeScript. Those numbers then deterministically select names, emails, and other attributes from identical data pools.
+
+**The result? Perfect cross-language consistency.**
+
+<Tabs>
+  <TabItem label="Go">
+    ```go
+    package main
+
+    import (
+        "fmt"
+        "github.com/pseudata/pseudata"
+    )
+
+    func main() {
+        users := pseudata.NewUserArray(42)
+        user := users.At(1000)
+        fmt.Println(user.Name) // → "John Smith"
+    }
+    ```
+
+  </TabItem>
+  
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+
+    public class Example {
+        public static void main(String[] args) {
+            UserArray users = new UserArray(42);
+            User user = users.at(1000);
+            System.out.println(user.getName()); // → "John Smith"
+        }
+    }
+    ```
+
+  </TabItem>
+  
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray
+
+    users = UserArray(42)
+    user = users.at(1000)
+    print(user.name)  # → "John Smith"
+    ```
+
+  </TabItem>
+  
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray } from "pseudata";
+
+    const users = new UserArray(42);
+    const user = users.at(1000);
+    console.log(user.name); // → "John Smith"
+    ```
+
+  </TabItem>
+</Tabs>
+
+**Same seed + Same index = Same data. Every time. Every language.**
+
+## Installation
+
+> **⚠️ Development Status:** Pseudata is currently in intensive initial development. There are no publicly available releases or installable versions yet. Follow [GitHub](https://github.com/pseudata/pseudata) for updates on the first release.
+
+**Installation (when released):**
+
+<Tabs>
+  <TabItem label="Go">
+    ```bash
+    go get github.com/pseudata/pseudata
+    ```
+  </TabItem>
+  
+  <TabItem label="Java">
+    ```xml
+    <!-- Add to pom.xml -->
+    <dependency>
+      <groupId>dev.pseudata</groupId>
+      <artifactId>pseudata</artifactId>
+      <version>0.1.0</version>
+    </dependency>
+    ```
+  </TabItem>
+  
+  <TabItem label="Python">
+    ```bash
+    pip install pseudata
+    ```
+  </TabItem>
+  
+  <TabItem label="TypeScript">
+    ```bash
+    npm install pseudata
+    # or
+    yarn add pseudata
+    ```
+  </TabItem>
+</Tabs>
+
+## Key Benefits
+
+- **Cross-Language Consistency** - Same seed = same data across all languages. Test frontend and backend with matching data.
+- **Infinite Scale** - O(1) instant access to any record. Generate billions without memory overhead—virtual arrays calculate on demand.
+- **Multi-Locale Support** - 15+ locales with culturally appropriate names, addresses, and geographic data.
+- **Zero Dependencies** - Pure native implementation in every language. No FFI, no bindings, just native code.
+
+## Next Steps
+
+- **Learn why this matters:** Read the [Introduction blog post](/blog/introduction/)
+- **Understand the architecture:** See how it works in the [Concept document](/reference/concept/)
+- **Follow development:** Watch progress on [GitHub](https://github.com/pseudata/pseudata)
+
+## Current Status
+
+**Active development** with working implementations in:
+
+- Go
+- Java
+- Python
+- TypeScript
+
+**Roadmap:** C#, Rust, Swift, Dart, PHP

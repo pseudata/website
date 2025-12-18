@@ -1,0 +1,243 @@
+---
+title: "Your Mock Data Lies"
+description: "How to generate identical test data across Go, Python, TypeScript, and Java with mathematical precision"
+author: "Iván Szkiba"
+date: "2025-12-18"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+**Why faker.js and Faker Don't Agree?**
+
+Modern software development is inherently polyglot. A typical stack might have a **Go** microservice handling authentication, a **Python** service running analytics, a **TypeScript** frontend, a **Swift** iOS app, and a **Dart** Android app.
+
+When developers write tests or build demos for these separate pieces, they reach for the standard tool in each ecosystem: `faker.js` for the frontend, `gofakeit` for the backend, `Faker` (Python) for the data scripts.
+
+These are all fantastic libraries. They all allow deterministic seeding.
+
+**But they are all different.**
+
+Seeding `faker.js` with `123` and `Faker` (Python) with `123` results in two completely different realities. The frontend expects "Alice," but the backend returns "Bob."
+
+```python
+# Python backend (Faker)
+from faker import Faker
+fake = Faker()
+Faker.seed(123)
+print(fake.name())  # → "Brett Davis"
+```
+
+```typescript
+// TypeScript frontend (faker.js)
+import { faker } from "@faker-js/faker";
+faker.seed(123);
+console.log(faker.person.fullName()); // → "Miss Dora Kiehn"
+```
+
+**Same seed. Different data. Integration chaos.**
+
+Why? Because each library uses a different random number generator and different word lists. Same seed, different algorithm, different data.
+
+This fragmentation forces teams to either:
+
+1. Hardcode static JSON files (which are heavy and hard to maintain).
+2. Write intricate "bridge" scripts just to sync mock data across services.
+3. Accept that frontend and backend tests run in parallel universes.
+
+What if mock data generation used a **standardized algorithm** instead of library-specific implementations?
+
+**Quick Comparison**
+
+| Feature                        | faker.js / Faker                    | Pseudata                                 |
+| ------------------------------ | ----------------------------------- | ---------------------------------------- |
+| **Cross-Language Consistency** | ❌ Different data per language      | ✅ Identical data across all languages   |
+| **String Seeds**               | 🟡 Varies by implementation         | ✅ Consistent hash-to-seed conversion    |
+| **Random Number Generator**    | 🟡 Library-specific implementations | ✅ Standardized algorithm (PCG32)        |
+| **Multi-Locale Support**       | ✅ Yes                              | ✅ Yes                                   |
+| **Best For**                   | 🎯 Single-language projects         | 🎯 Polyglot systems, integration testing |
+
+**The bottom line:** Traditional faker libraries are excellent for single-language development. But the moment your system spans multiple languages, you need a **standardized algorithm**, not just another library.
+
+## Introducing Pseudata
+
+**[Pseudata](https://pseudata.dev)** is an open-source library (Apache 2.0) designed to solve the **Polyglot Data Problem**.
+
+The goal is simple but ambitious: **To create an algorithm specification for mock data generation that produces identical results in every programming language.**
+
+> **The Vision:** A seed of `42` + Index `1000` should result in the exact same User object—down to the pixel in the avatar—whether it is accessed in Python, Go, Java, or TypeScript/JavaScript.
+
+### How It Works in Practice
+
+<Tabs>
+  <TabItem label="Go">
+    ```go
+    package main
+    import "github.com/pseudata/pseudata"
+
+    users := pseudata.NewUserArray(42)
+    user := users.At(1000)
+    fmt.Println(user.Name)  // → "John Smith"
+    fmt.Println(user.Email) // → "john.smith@example.com"
+    ```
+
+  </TabItem>
+  
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+
+    UserArray users = new UserArray(42);
+    User user = users.at(1000);
+    System.out.println(user.getName());  // → "John Smith"
+    System.out.println(user.getEmail()); // → "john.smith@example.com"
+    ```
+
+  </TabItem>
+  
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray
+
+    users = UserArray(42)
+    user = users.at(1000)
+    print(user.name)  # → "John Smith"
+    print(user.email) # → "john.smith@example.com"
+    ```
+
+  </TabItem>
+  
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray } from "pseudata";
+
+    const users = new UserArray(42);
+    const user = users.at(1000);
+    console.log(user.name);  // → "John Smith"
+    console.log(user.email); // → "john.smith@example.com"
+    ```
+
+  </TabItem>
+</Tabs>
+
+**Same seed. Same index. Same data. Every language.**
+
+## The Architecture: Virtual & Stateless
+
+To achieve this universal consistency, Pseudata ignores the traditional "list of random words" approach and uses a strict mathematical architecture based on the **PCG32** algorithm.
+
+### 1. The "Virtual Array"
+
+Instead of generating a list of 1,000 objects and storing them in memory, Pseudata implements **Virtual Arrays**.
+
+Data is calculated on-the-fly using a hierarchical seeding strategy:
+`ObjectSeed = WorldSeed + Index`
+
+This allows for **O(1) Random Access** without memory overhead. A developer can request `User[5,000,000]` instantly, without generating the previous 4,999,999 items. This is something most current libraries struggle with efficiently.
+
+For convenience, Pseudata includes a **SeedFrom** utility function that converts strings into deterministic numeric seeds, allowing developers to use memorable identifiers like `"demo-2025"` instead of raw numbers.
+
+### 2. Consistency by Default
+
+Pseudata enforces strict schema consistency across languages. A `User` object generated in Java will have the exact same field names and value formats as one generated in Python. This eliminates the "works on my machine" class of bugs caused by subtle data structure mismatches between services.
+
+### 3. Multi-Locale Support
+
+Unlike most mock data libraries that focus on English-only data, Pseudata supports **15 locales** across 3 tiers—from English and Chinese to Arabic and Vietnamese. Each locale provides culturally appropriate names, addresses, and geographic data, making it suitable for building and testing globally-aware applications.
+
+## Why This Matters Now
+
+Micro-frontends, microservices, edge computing—the industry is doubling down on distributed architectures. But we're still mocking data like it's 2010.
+
+With Pseudata, you can:
+
+- **QA Engineers** report a bug in "User #8821", and the backend dev can instantly reproduce that user's state locally without a database dump.
+- **Sales Teams** present demos where the data looks consistent across the web dashboard and the mobile app.
+- **Load Testing** scripts in Python verify the exact data rendered by a Node.js server.
+
+## Current Status
+
+**Pseudata is currently in active development with working implementations in 4 languages.**
+
+The initial release supports **Go, Java, Python, and TypeScript**, with 5 additional languages planned (C#, Rust, Swift, Dart, PHP). The core architecture is established and demonstrably consistent across all current implementations.
+
+## Getting Started
+
+> **⚠️ Development Status:** Pseudata is currently in intensive initial development. There are no publicly available releases or installable versions yet. The core architecture is being finalized across all four languages.
+
+While the libraries are not yet released, you can follow development progress and explore the technical architecture:
+
+**Installation (when released):**
+
+<Tabs>
+  <TabItem label="Go">```bash go get github.com/pseudata/pseudata ```</TabItem>
+
+<TabItem label="Java">
+  ```xml
+  <dependency>
+    <groupId>dev.pseudata</groupId>
+    <artifactId>pseudata</artifactId>
+    <version>0.1.0</version>
+  </dependency>
+  ```
+</TabItem>
+
+<TabItem label="Python">```bash pip install pseudata ```</TabItem>
+
+  <TabItem label="TypeScript">```bash npm install pseudata ```</TabItem>
+</Tabs>
+
+**Explore Now:**
+
+- [Documentation](https://pseudata.dev)
+- [GitHub Organization](https://github.com/pseudata)
+- [Technical Concept](https://pseudata.dev/reference/concept/)
+- [Get Started Guide](https://pseudata.dev/guides/get-started/)
+
+## What's Next?
+
+The roadmap is organized into focused phases:
+
+**Phase 1 (Current):** Core Language Support
+
+- Finalize Go, Java, Python, and TypeScript implementations
+- Ensure 100% cross-language consistency
+- Comprehensive test coverage
+- Initial stable release (v1.0)
+
+**Phase 2:** Backend Expansion
+
+- C# for .NET ecosystems
+- Rust for high-performance systems
+- PHP for web applications
+
+**Phase 3:** Mobile Platforms
+
+- Swift for iOS development
+- Dart for Flutter cross-platform apps
+
+**Phase 4:** Advanced Features
+
+- Additional data types (Products, Companies, Financial data)
+- Custom schema definitions
+- Plugin architecture for domain-specific generators
+- Performance optimizations
+
+## Join the Mission
+
+If you've ever struggled with inconsistent mock data across your polyglot stack, **Pseudata is being built for you.**
+
+The project is **open source (Apache 2.0)** and welcomes contributors who care about:
+
+- Writing tests that work the same way everywhere
+- Building demos with consistent data
+- Making mock data generation a solved problem
+
+**How to Contribute:**
+
+- Star the repositories to show support
+- Report bugs or inconsistencies you find
+- Suggest new features or data types
+- Contribute implementations in new languages
+- Improve documentation and examples
+
+**Let's fix mock data. Together.**

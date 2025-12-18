@@ -1,0 +1,150 @@
+---
+title: "Concept"
+description: "How Pseudata uses PCG32 and virtual arrays to deliver identical mock data across all programming languages"
+---
+
+**Pseudata** is a high-performance, multi-language library designed to generate infinite, mathematically deterministic datasets for software development, testing, and demonstration purposes.
+
+Unlike traditional mock data libraries which function as isolated ecosystems, or static datasets which consume large amounts of memory, Pseudata uses **standardized procedural generation algorithms** (specifically PCG32) to create complex, realistic object graphs that are identical across all supported languages.
+
+**The Promise:** `User[1000]` with seed `42` always generates a user with the exact same name, UUID, email, and avatar—regardless of whether you access it in Go, Java, Python, or TypeScript.
+
+## The Problem
+
+Modern development faces a "Data Dilemma" when testing and demoing software across polyglot stacks:
+
+- **The "Silo" Problem (Inconsistency):** While most faker libraries allow deterministic seeding, they use different underlying algorithms and dictionaries. Seeding `faker.js` with `42` produces a completely different user than seeding `Faker (Python)` with `42`. This forces frontend and backend tests to run in parallel universes with unmatched data.
+- **The "JSON" Problem (Memory):** Loading a static JSON file of 1 million users to test scrolling performance or load capability often crashes the browser or consumes excessive resources.
+- **The "Maintenance" Problem:** Using static files to solve consistency issues leads to heavy repositories and merge conflicts whenever data needs to be updated or expanded.
+
+## How It Works
+
+Pseudata solves these problems by treating data generation as a unified algorithm specification rather than language-specific implementations.
+
+### Core Philosophy
+
+- **Virtual Arrays:** Data is never stored—it's calculated on demand. A `UserArray` of size 10 billion takes up only 16 bytes of memory (two 64-bit integers: one for the world seed and one for the type sequence).
+- **O(1) Access:** Accessing the 1,000,000th item is as fast as accessing the 1st. There is no iteration penalty.
+- **Universal Consistency:** A seed of `42` produces the exact same dataset in all supported languages, enabling seamless cross-service testing.
+
+## Key Capabilities
+
+### Cross-Language Consistency
+
+Same seed produces identical data across all programming languages. A `User` object generated in Java has the exact same field names, value formats, and content as one generated in Python, Go, or TypeScript. This eliminates "works on my machine" integration bugs and enables seamless cross-service testing.
+
+Every field—from the user's gender to the milliseconds in a timestamp—is derived deterministically from the seed and index using the standardized PCG32 algorithm.
+
+### Infinite Scale
+
+O(1) instant random access to any record in datasets of arbitrary size—accessing the 1,000,000th item is as fast as accessing the 1st. Because objects are transient (created only when requested), you can simulate "Big Data" environments with zero memory footprint. A `UserArray` of size 10 billion takes only 16 bytes of memory.
+
+Perfect for load testing and performance profiling where traditional approaches would exhaust system resources.
+
+### Multi-Locale Support
+
+Pseudata includes culturally authentic datasets for multiple locales, ensuring realistic international testing scenarios. The implementation provides curated name pools, addresses, and geographic data organized in three tiers:
+
+**Tier 1 - High Value Markets:**
+
+- `en_US` - English (United States)
+- `zh_CN` - Chinese (Simplified)
+- `hi_IN` - Hindi (India)
+- `ja_JP` - Japanese (Japan)
+
+**Tier 2 - Major Markets:**
+
+- `es_MX` - Spanish (Mexico)
+- `pt_BR` - Portuguese (Brazil)
+- `fr_FR` - French (France)
+- `de_DE` - German (Germany)
+- `ar_SA` - Arabic (Saudi Arabia)
+- `en_GB` - English (United Kingdom)
+- `en_CA` - English (Canada)
+- `fr_CA` - French (Canada)
+
+**Tier 3 - Edge Cases:**
+
+- `hu_HU` - Hungarian (Hungary)
+- `tr_TR` - Turkish (Turkey)
+- `vi_VN` - Vietnamese (Vietnam)
+
+Each locale includes locale-specific first names (male/female), last names, cities, states/provinces, streets, and postal code formats. The roadmap includes additional locales based on community demand.
+
+### Zero Dependencies
+
+Pseudata is implemented natively (no FFI bindings) ensuring zero external dependencies and optimal performance in every language. The initial implementation includes Go, Java, Python, and TypeScript. The roadmap includes C#, PHP, and Rust for backend services, as well as Swift and Dart for mobile development.
+
+## Technical Architecture
+
+### Random Number Generation (PCG32)
+
+At the heart of Pseudata is the **PCG32 (Permuted Congruential Generator)** algorithm. PCG32 was chosen because:
+
+- It is statistically superior to standard system randomizers, passing all BigCrush tests from TestU01.
+- It supports **Stream Selection**: Multiple independent streams of random numbers can exist that never overlap, controlled by the sequence parameter.
+- It ensures bit-level reproducibility across different CPU architectures and languages.
+
+The algorithm operates on a 64-bit internal state using a Linear Congruential Generator (LCG) with a per-stream increment derived from the sequence parameter. The output function applies XOR-shift and rotate operations to produce high-quality 32-bit random values.
+
+### Seeding Strategy
+
+To achieve O(1) random access, a hierarchical seeding strategy is used where each object is generated by an independent PCG32 instance:
+
+```
+Generator(seed: WorldSeed + Index, sequence: TypeSequence)
+```
+
+1.  **World Seed:** The global 64-bit integer provided by the developer (e.g., `42`).
+2.  **Index:** The position in the array (e.g., `50`).
+3.  **Type Sequence:** A unique constant ID for each data type (e.g., `101` for Users, `105` for Addresses) that serves as the stream identifier to prevent correlation between different arrays.
+
+When you call `users.at(50)`, the engine instantiates a fresh PCG32 Generator with `seed = 42 + 50 = 92` and `sequence = 101`. This generator produces all random values for that specific user object, then is discarded. This ensures User[50] with WorldSeed=42 always generates identical data, regardless of access order or previously generated objects.
+
+### String-to-Seed Conversion
+
+While numeric seeds provide mathematical precision, real-world applications often need to derive seeds from human-readable identifiers like usernames, email addresses, or test scenario names. The `SeedFrom` utility function addresses this need by converting arbitrary strings into deterministic 64-bit integer seeds.
+
+**Use Cases:**
+
+- **Test Scenarios:** Generate consistent test data by scenario name (e.g., `SeedFrom("checkout-flow-test")`)
+- **Reproducible Demos:** Reset demo environments to known states using memorable string keys
+
+**Implementation Approach:**
+
+The `SeedFrom` function combines two proven hashing algorithms to ensure distribution quality and cross-language consistency:
+
+1. **FNV-1a Hash:** A fast, simple hash algorithm that processes the string byte-by-byte using XOR and multiply operations, building up a 64-bit hash value. This provides the initial mixing of the input string.
+
+2. **Murmur3 Avalanche Finalization:** A three-step mixing process that ensures excellent bit distribution. Each step performs XOR-shift-multiply operations to "avalanche" changes throughout all 64 bits, preventing clustering of similar inputs.
+
+This two-stage approach ensures that even similar strings (like "user1" and "user2") produce completely different, well-distributed seed values.
+
+**Cross-Language Implementation:**
+
+Each supported language implements `SeedFrom` as a static/standalone function with identical behavior. The function is rigorously tested using cross-language test vectors to ensure that the same string produces the exact same 64-bit seed value across all implementations, regardless of platform architecture or language runtime.
+
+### Data Types & Schemas
+
+**Data Types:**
+
+Pseudata provides two primary data structures:
+
+- **User Objects:** OIDC-compliant user profiles containing:
+  - Core identity: `sub` (UUID v4 format), `name`, `given_name`, `family_name`
+  - Optional fields: `middle_name`, `nickname`, `preferred_username`
+  - Contact: `email` (using curated domain pools)
+  - Demographics: `gender`, `locale`, `picture` (avatar URL)
+- **Address Objects:** Locale-aware geographic data including street address, city, state/province, and postal code formatted according to the selected locale's conventions.
+
+**Generation Logic:**
+
+- **Static Pools:** Small, optimized arrays of strings (First Names, Last Names, Cities) are embedded directly in the library code as generated constants.
+- **Deterministic Constraints:** Logic is deterministic and locale-aware. _Example:_ If the generator selects `locale: "en_US"`, subsequent field generation is constrained to US name pools, US states, US cities, and ZIP code format (5 or 9 digits).
+
+## Use Cases
+
+- **QA Engineers:** Create stable, reproducible test beds where frontend and backend data match perfectly.
+- **Frontend Developers:** Build UI components that handle massive lists (virtual scrolling) without waiting for backend APIs.
+- **Sales Engineers:** Build consistent, high-fidelity product demos that look real and "reset" perfectly every time.
+- **Load Testers:** Generate high-volume unique data (e.g., 1 million unique email addresses) to test database indexing without large files.

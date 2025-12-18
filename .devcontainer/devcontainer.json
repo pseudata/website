@@ -1,0 +1,32 @@
+{
+  "name": "pseudata-website",
+  "image": "mcr.microsoft.com/devcontainers/base:2-bookworm",
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "extensions": ["EditorConfig.EditorConfig", "esbenp.prettier-vscode", "github.vscode-pull-request-github"]
+    }
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": { "version": "2.72.0" },
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" }
+  },
+
+  "remoteEnv": {
+    "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
+  },
+
+  "forwardPorts": [4321, 4322],
+  "portsAttributes": {
+    "4321": {
+      "label": "Astro Dev Server",
+      "onAutoForward": "notify"
+    },
+    "4322": {
+      "label": "Astro Preview Server",
+      "onAutoForward": "notify"
+    }
+  }
+}

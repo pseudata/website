@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" width="800" height="300">
+  <!-- Background -->
+  <rect width="800" height="300" fill="transparent"/>
+  
+  <!-- Seed box -->
+  <rect x="50" y="120" width="100" height="60" rx="8" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="100" y="145" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">Seed: 42</text>
+  <text x="100" y="163" font-family="monospace" font-size="12" fill="white" text-anchor="middle">Index: 1000</text>
+  
+  <!-- Arrows from seed to languages -->
+  <path d="M 150 140 L 230 80" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 150 145 L 230 130" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 150 155 L 230 180" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 150 160 L 230 230" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Language boxes - all using exact same colors as seed box -->
+  <!-- Go -->
+  <rect x="230" y="60" width="140" height="40" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="300" y="85" font-family="monospace" font-size="16" fill="white" text-anchor="middle" font-weight="bold">Go</text>
+  
+  <!-- Java -->
+  <rect x="230" y="110" width="140" height="40" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="300" y="135" font-family="monospace" font-size="16" fill="white" text-anchor="middle" font-weight="bold">Java</text>
+  
+  <!-- Python -->
+  <rect x="230" y="160" width="140" height="40" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="300" y="185" font-family="monospace" font-size="16" fill="white" text-anchor="middle" font-weight="bold">Python</text>
+  
+  <!-- TypeScript -->
+  <rect x="230" y="210" width="140" height="40" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="300" y="235" font-family="monospace" font-size="16" fill="white" text-anchor="middle" font-weight="bold">TypeScript</text>
+  
+  <!-- Arrows from languages to result -->
+  <path d="M 370 80 L 430 115" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 370 130 L 430 135" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 370 180 L 430 165" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 370 230 L 430 185" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Result box - same colors as seed box -->
+  <rect x="430" y="100" width="320" height="100" rx="8" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="590" y="130" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">Identical Output</text>
+  <text x="590" y="155" font-family="monospace" font-size="13" fill="white" text-anchor="middle">Name: John Smith</text>
+  <text x="590" y="175" font-family="monospace" font-size="13" fill="white" text-anchor="middle">Email: john.smith@example.com</text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7cb3d9"/>
+    </marker>
+  </defs>
+</svg>

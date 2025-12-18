@@ -1,0 +1,39 @@
+/* Steel Blue Brand Theme Customization */
+
+:root {
+  /* Steel Blue accent colors for light mode */
+  --sl-color-accent-low: #e6f0f7;
+  --sl-color-accent: #4682b4;
+  --sl-color-accent-high: #3a6a94;
+  --sl-hue-accent: 207;
+
+  /* Optional: Customize other elements */
+  --sl-color-text-accent: #4682b4;
+}
+
+[data-theme="dark"] {
+  /* Lighter steel blue for dark mode */
+  --sl-color-accent-low: #1e3a52;
+  --sl-color-accent: #7cb3d9;
+  --sl-color-accent-high: #a3cde8;
+  --sl-hue-accent: 207;
+
+  /* Optional: Customize other elements */
+  --sl-color-text-accent: #7cb3d9;
+}
+
+/* Customize link colors */
+a {
+  --sl-color-text-accent: var(--sl-color-accent);
+}
+
+/* Customize primary button (hero CTA) */
+.sl-link-button[data-variant="primary"] {
+  background-color: var(--sl-color-accent);
+  border-color: var(--sl-color-accent);
+}
+
+.sl-link-button[data-variant="primary"]:hover {
+  background-color: var(--sl-color-accent-high);
+  border-color: var(--sl-color-accent-high);
+}

@@ -47,14 +47,81 @@ Pseudata solves this by making mock data generation a standardized algorithm—n
   </Card>
 </CardGrid>
 
-## Same Seed, Same Data
+## Same Seed, Same Data—At Any Scale
 
-`User[1000]` with seed `42` = **Always** the same:
+**Pseudata is the only faker library that guarantees both cross-language consistency and O(1) infinite scale.**
 
-- Same name
-- Same email
-- Same avatar
-- **Every time. Every language.**
+<Tabs>
+  <TabItem label="❌ Traditional Fakers">
+    
+**Different data across languages**
+
+```python
+# Python (Faker)
+Faker.seed(42)
+fake.name()  # → "Brett Davis"
+```
+
+```typescript
+// TypeScript (faker.js)
+faker.seed(42);
+faker.person.fullName(); // → "Miss Dora Kiehn"
+```
+
+**Sequential access only**
+
+```python
+# To get item 1,000,000, must iterate - O(n)
+faker.seed(42)
+for i in range(1_000_000):
+    name = faker.name()
+```
+
+  </TabItem>
+  
+  <TabItem label="✅ Pseudata">
+    
+**Identical data across all languages**
+
+```python
+# Python
+users = UserArray(42)
+user = users.at(0)
+print(user.name)  # → "John Smith"
+```
+
+```typescript
+// TypeScript
+const users = new UserArray(42);
+const user = users.at(0);
+console.log(user.name); // → "John Smith"
+```
+
+**Direct access to any index - O(1)**
+
+```python
+# Jump directly to the billionth record
+users = UserArray(42)
+user = users.at(1_000_000_000)  # Instant
+```
+
+  </TabItem>
+</Tabs>
+
+### Why This Matters
+
+**Cross-Language Consistency** enables reliable integration testing across polyglot systems. When your Go backend and TypeScript frontend both generate `User[1000]` with seed `42`, you get the same test data—eliminating the integration test mismatches that plague microservices architectures.
+
+**Direct O(1) Access** unlocks scenarios impossible with traditional fakers:
+
+- **Load testing** - Each test worker accesses its own range (worker 1 uses indices 0-999, worker 2 uses 1000-1999) without coordination
+- **Parallel processing** - Split a billion-record dataset across processes instantly, no sequential generation required
+- **Sparse testing** - Test edge cases at indices 1, 1000, 1000000, 1000000000 without generating intermediate records
+- **Reproducible demos** - Jump to the "interesting" user at index 42857 every time
+
+### See It In Action
+
+**`User[1000]` with seed `42` = Always the same across every language:**
 
 ![Diagram showing seed 42 flowing to Go, Java, Python, and TypeScript implementations, all producing identical output: John Smith](/images/consistency-diagram.svg)
 

@@ -20,6 +20,90 @@ export default defineConfig({
                         href: '/rss.xml',
                     },
                 },
+                {
+                    tag: 'link',
+                    attrs: {
+                        rel: 'icon',
+                        href: '/logo-light.svg',
+                        type: 'image/svg+xml',
+                        media: '(prefers-color-scheme: light)',
+                    },
+                },
+                {
+                    tag: 'link',
+                    attrs: {
+                        rel: 'icon',
+                        href: '/logo-dark.svg',
+                        type: 'image/svg+xml',
+                        media: '(prefers-color-scheme: dark)',
+                    },
+                },
+                {
+                    tag: 'link',
+                    attrs: {
+                        rel: 'apple-touch-icon',
+                        sizes: '180x180',
+                        href: '/apple-touch-icon.png',
+                    },
+                },
+                {
+                    tag: 'link',
+                    attrs: {
+                        rel: 'manifest',
+                        href: '/manifest.json',
+                    },
+                },
+                {
+                    tag: 'meta',
+                    attrs: {
+                        name: 'theme-color',
+                        content: '#4682B4',
+                        media: '(prefers-color-scheme: light)',
+                    },
+                },
+                {
+                    tag: 'meta',
+                    attrs: {
+                        name: 'theme-color',
+                        content: '#7CB3D9',
+                        media: '(prefers-color-scheme: dark)',
+                    },
+                },
+                {
+                    tag: 'meta',
+                    attrs: {
+                        property: 'og:site_name',
+                        content: 'Pseudata',
+                    },
+                },
+                {
+                    tag: 'meta',
+                    attrs: {
+                        property: 'og:type',
+                        content: 'website',
+                    },
+                },
+                {
+                    tag: 'meta',
+                    attrs: {
+                        property: 'og:image',
+                        content: 'https://pseudata.dev/social-preview.png',
+                    },
+                },
+                {
+                    tag: 'meta',
+                    attrs: {
+                        property: 'twitter:image',
+                        content: 'https://pseudata.dev/social-preview.png',
+                    },
+                },
+                {
+                    tag: 'meta',
+                    attrs: {
+                        property: 'twitter:card',
+                        content: 'summary_large_image',
+                    },
+                },
             ],
             logo: {
                 light: './public/logo-light.svg',

@@ -1,16 +1,65 @@
 {
   "name": "pseudata-website",
   "image": "mcr.microsoft.com/devcontainers/base:2-bookworm",
+  
+  // Mount all workspace folders for access to other projects
+  "workspaceFolder": "/workspaces/pseudata/pseudata-website",
+  "workspaceMount": "source=${localWorkspaceFolder}/..,target=/workspaces/pseudata,type=bind,consistency=cached",
+  
   "customizations": {
     "vscode": {
-      "settings": {},
-      "extensions": ["EditorConfig.EditorConfig", "esbenp.prettier-vscode", "github.vscode-pull-request-github"]
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[javascript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[astro]": {
+          "editor.defaultFormatter": "astro-build.astro-vscode",
+          "editor.formatOnSave": true
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        // Exclude heavy folders from file watcher to improve performance
+        "files.watcherExclude": {
+          "**/pseudata-poc/**": true,
+          "**/pseudata/**": true,
+          "**/pseudata-github/**": true,
+          "**/node_modules/**": true,
+          "**/.git/**": true
+        },
+        "search.exclude": {
+          "**/pseudata-poc/**": true,
+          "**/pseudata/**": true,
+          "**/pseudata-github/**": true,
+          "**/node_modules/**": true
+        }
+      },
+      "extensions": [
+        "EditorConfig.EditorConfig",
+        "esbenp.prettier-vscode",
+        "github.vscode-pull-request-github",
+        "astro-build.astro-vscode",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
+      ]
     }
   },
 
+  // Minimal features - only what's needed for website development
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": { "version": "2.72.0" },
-    "ghcr.io/devcontainers/features/node:1": { "version": "24" }
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
+    "ghcr.io/devcontainers/features/typescript:1": { "version": "latest" }
   },
 
   "remoteEnv": {
@@ -28,5 +77,8 @@
       "label": "Astro Preview Server",
       "onAutoForward": "notify"
     }
-  }
+  },
+  
+  // Install dependencies automatically
+  "postCreateCommand": "npm install"
 }

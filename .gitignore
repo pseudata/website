@@ -26,3 +26,6 @@ pnpm-debug.log*
 
 # deployment
 .vercel
+
+# TypeSpec output
+tsp-output/

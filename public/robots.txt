@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+
+# AI Search Engines
+User-agent: GPTBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: anthropic-ai
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+
+# Training Data Crawlers
+User-agent: CCBot
+Allow: /
+
+# Standard Search Engines
+User-agent: Googlebot
+Allow: /
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://pseudata.dev/sitemap-index.xml
+

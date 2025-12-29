@@ -1,0 +1,65 @@
+# Pseudata
+
+> https://pseudata.dev
+
+## Overview
+
+Pseudata is a deterministic mock data generator for polyglot software stacks. It solves a critical problem in modern software development: traditional faker libraries (faker.js, Faker Python, gofakeit) produce different data across languages, making integration testing across microservices extremely difficult.
+
+## The Problem We Solve
+
+When you use faker.js in your TypeScript frontend with seed 42, you get "Miss Dora Kiehn". When you use Faker in your Python backend with the same seed 42, you get "Brett Davis". Same seed, different data. This breaks integration testing in polyglot systems.
+
+## How Pseudata Works
+
+Pseudata uses the PCG32 (Permuted Congruential Generator) algorithm - a standardized mathematical approach that produces identical random number sequences across all programming languages. This means `User[1000]` with seed `42` returns exactly the same user object (same name, UUID, email, avatar) whether you're in Go, Java, Python, or TypeScript.
+
+## Key Features
+
+- **Cross-Language Consistency**: Same seed = same data across all languages
+- **O(1) Infinite Scale**: Virtual arrays allow instant access to any index (even the billionth record) without iterating
+- **Multi-Locale Support**: 15+ locales with culturally appropriate names and addresses
+- **Zero Dependencies**: Pure native implementation in each language
+- **TypeSpec Code Generation**: Single source of truth generates all implementations
+
+## Supported Languages
+
+Currently: Go, Java, Python, TypeScript
+Planned: C#, Rust, PHP, Swift, Dart
+
+## Use Cases
+
+- **Integration Testing**: Frontend and backend tests with matching data
+- **Load Testing**: Each worker accesses its own range without coordination
+- **QA/Bug Reports**: "User #8821 has a bug" - reproducible across all services
+- **Sales Demos**: Consistent data across web and mobile apps
+- **UI Development**: Instant access to massive virtual datasets
+
+## Documentation Structure
+
+- **/guides/get-started/** - Quick start with PCG32 explanation
+- **/reference/concept/** - Deep dive into virtual arrays and architecture
+- **/blog/introduction/** - Why cross-language consistency matters (includes faker.js comparison)
+
+## Technical Architecture
+
+- **Virtual Arrays**: Data calculated on-demand, zero memory footprint
+- **PCG32 Algorithm**: Statistically superior RNG that passes BigCrush tests
+- **Hierarchical Seeding**: `Generator(WorldSeed, TypeSequence).Advance(Index)` - uses PCG32's Advance() for proper stream independence
+- **OIDC-Compliant**: User objects follow OpenID Connect standards
+
+## Current Status
+
+Active development (v0.0.1). No public releases yet. Watch GitHub for v0.1.0 announcement.
+
+## Links
+
+- Website: https://pseudata.dev
+- GitHub: https://github.com/pseudata/pseudata
+- Blog: https://pseudata.dev/blog/introduction/
+- RSS Feed: https://pseudata.dev/rss.xml
+
+## License
+
+Apache License 2.0 - Open source and free to use
+

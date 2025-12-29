@@ -189,8 +189,8 @@ Each template should demonstrate:
   - **Cons:** Requires build step, larger bundle size (~50-100KB)
 
 - **Option B: Import from npm/CDN (Alternative for TypeScript)**
-  - If Pseudata TypeScript SDK is published to npm, use: `import { UserArray } from "pseudata"`
-  - Or use CDN: `import { UserArray } from "https://cdn.jsdelivr.net/npm/pseudata@latest"`
+  - If Pseudata TypeScript SDK is published to npm, use: `import { UserArray } from "@pseudata/core"`
+  - Or use CDN: `import { UserArray } from "https://cdn.jsdelivr.net/npm/@pseudata/core@latest"`
   - **Pros:** Always up-to-date, no bundling needed
   - **Cons:** Requires npm publication, external dependency, network required
 
@@ -240,7 +240,7 @@ Each template should demonstrate:
 - Or use rollup/vite for more advanced bundling
 - Update playground to import from local path: `import { UserArray } from "/pseudata-sdk/typescript.js"`
 - **For first implementation:** Use local bundle (works immediately)
-- **When published to npm:** Add commented alternative: `// import { UserArray } from "pseudata";`
+- **When published to npm:** Add commented alternative: `// import { UserArray } from "@pseudata/core";`
 
 **Implementation for Python (when published to PyPI):**
 
@@ -663,7 +663,7 @@ Each language template will include:
 // Using locally bundled SDK (until published to npm)
 import { UserArray } from "/pseudata-sdk/typescript.js";
 // TODO: When published to npm, uncomment and use:
-// import { UserArray } from "pseudata";
+// import { UserArray } from "@pseudata/core";
 
 const users = new UserArray(42);
 const user = users.at(1000);

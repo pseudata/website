@@ -1,6 +1,36 @@
 ---
 title: "Get Started"
 description: "Quick start guide to understanding and using Pseudata for cross-language mock data generation"
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Get Started with Pseudata",
+        "description": "Quick start guide to understanding and using Pseudata for cross-language mock data generation",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/guides/get-started/"
+        },
+        "keywords": ["getting started", "tutorial", "mock data", "PCG32", "cross-language", "testing"]
+      }
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";

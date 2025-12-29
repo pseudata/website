@@ -1,6 +1,6 @@
 ---
 title: Pseudata
-description: Deterministic mock data generation across all programming languages
+description: Deterministic mock data generation across all programming languages using PCG32 algorithm for cross-language consistency
 template: splash
 hero:
   tagline: One seed. Every language. Same data.
@@ -17,6 +17,44 @@ hero:
       link: https://github.com/pseudata/pseudata
       icon: github
       variant: minimal
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Pseudata",
+        "url": "https://pseudata.dev",
+        "logo": "https://pseudata.dev/logo-light.svg",
+        "description": "Deterministic mock data generation across all programming languages",
+        "sameAs": ["https://github.com/pseudata/pseudata"]
+      }
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Pseudata",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": ["Windows", "macOS", "Linux"],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "Deterministic mock data generator that produces identical data across Go, Java, Python, and TypeScript using PCG32 algorithm",
+        "featureList": [
+          "Cross-language consistency",
+          "O(1) infinite scale",
+          "Multi-locale support",
+          "Zero dependencies"
+        ],
+        "programmingLanguage": ["Go", "Java", "Python", "TypeScript"]
+      }
 ---
 
 import { Card, CardGrid, Tabs, TabItem } from "@astrojs/starlight/components";

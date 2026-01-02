@@ -1,0 +1,515 @@
+---
+title: Contributing to Pseudata
+description: Learn how to contribute to Pseudata by adding models, primitives, resources, or implementing support for new programming languages.
+sidebar:
+  order: 0
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Contributing to Pseudata",
+        "description": "Learn how to contribute to Pseudata by adding models, primitives, resources, or implementing support for new programming languages.",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/contributing/"
+        }
+      }
+---
+
+Thank you for your interest in contributing to Pseudata! This guide will help you understand the different ways you can contribute and point you to the right resources.
+
+## What is Pseudata?
+
+Pseudata is a deterministic mock data generation library that produces **identical data across all programming languages** for the same seed. This cross-language consistency is achieved through:
+
+- **PCG32 algorithm**: Deterministic pseudo-random number generation
+- **TypeSpec definitions**: Single source of truth for data structures
+- **Fixture-based testing**: Ensures outputs match exactly across languages
+- **Code generation**: Automated SDK creation from TypeSpec
+
+Pseudata initially launched with support for **Go**, **Java**, **Python**, and **TypeScript**. The roadmap includes expanding to nine programming languages (**C#**, **PHP**, **Rust**, **Swift**, and **Dart**), with community contributions welcome for additional language implementations.
+
+## Ways to Contribute
+
+Choose the contribution type that matches what you want to add:
+
+### 1. Add a New Model
+
+**What**: Define new data structures (like `Person`, `Product`, `Order`) with their corresponding virtual arrays.
+
+**When to use**:
+- You need a new type of test data (e.g., `Invoice`, `Event`)
+- You want to generate arrays of complex objects
+- Your use case requires domain-specific data structures
+
+**Key skills**: TypeSpec, understanding of code generation
+
+[→ Read the Add a New Model guide](/contributing/add-new-model/)
+
+### 2. Add a New Primitive
+
+**What**: Implement fundamental data generation methods (like `email()`, `hexColor()`, `phoneNumber()`).
+
+**When to use**:
+- You need a new type of random value
+- The primitive will be reused across multiple models
+- You want to extend Pseudata's base functionality
+
+**Key skills**: Go, Java, Python, TypeScript, understanding of deterministic generation
+
+**Important**: Must implement in **all supported languages** to maintain consistency.
+
+[→ Read the Add a New Primitive guide](/contributing/add-new-primitive/)
+
+### 3. Add a New Resource
+
+**What**: Add locale-specific data files (names, cities, words) for realistic test data.
+
+**When to use**:
+- You need vocabulary for text generation (nouns, adjectives)
+- You're implementing primitives that need locale-specific lists
+
+**Key skills**: Data curation, optional primitive implementation
+
+[→ Read the Add a New Resource guide](/contributing/add-new-resource/)
+
+### 4. Add a New Locale
+
+**What**: Add support for a new country or region (e.g., adding `ja_JP` for Japan).
+
+**When to use**:
+- You need culturally appropriate names and addresses for a new country
+- You want to expand Pseudata's international coverage
+
+**Key skills**: Linguistic knowledge, data collection
+
+[→ Read the Add a New Locale guide](/contributing/add-new-locale/)
+
+### 5. Add a New SDK
+
+**What**: Implement full Pseudata support for a new programming language (e.g., Rust, C#, PHP, Ruby).
+
+**When to use**:
+- Your team uses a language not yet supported
+- You want to enable Pseudata for a major ecosystem
+- You're comfortable with language internals and tooling
+
+**Key skills**: Deep knowledge of target language, TypeScript (for emitters), understanding of all Pseudata components
+
+**Important**: This is a significant undertaking requiring implementation of Generator, emitters, primitives, and comprehensive testing.
+
+[→ Read the Add a New SDK guide](/contributing/add-new-sdk/)
+
+## The Foundation: Fixture-Based Testing
+
+**All contributions must include fixture-based tests.** This is not optional—it's the foundation of Pseudata's cross-language consistency guarantee.
+
+### Why Fixtures Matter
+
+Without fixtures, you could have:
+- Go generating `"John Smith"` for seed 42
+- Java generating `"John Smyth"` due to a subtle bug
+- Each language passing its own tests, but cross-language compatibility broken
+
+Fixtures provide a **single source of truth**: pre-generated test vectors that all languages must match exactly.
+
+### How It Works
+
+1. **Go as Reference**: Implement in Go first, run `go test -update` to generate fixture JSON
+2. **Cross-Language Verification**: Other languages load the same fixtures and verify outputs match
+3. **Continuous Validation**: Any code change that breaks consistency fails tests immediately
+
+### What Fixtures Catch
+
+- RNG state bugs (calling `rng()` multiple times incorrectly)
+- UTF-8 handling issues (byte vs. rune slicing)
+- Type mapping errors (signed vs. unsigned integers)
+- Resource access bugs (wrong locale, missing data)
+- Formatting inconsistencies (date/time/phone patterns)
+
+[→ Read the detailed Testing Guide](/contributing/testing/)
+
+## Quick Start
+
+1. **Fork the repository**: [github.com/pseudata/pseudata](https://github.com/pseudata/pseudata)
+2. **Choose your contribution type**: Follow one of the four guides above
+3. **Implement your changes**: Follow the step-by-step instructions
+4. **Add fixture tests**: Ensure cross-language consistency
+5. **Run all tests**: Verify nothing broke
+6. **Submit a pull request**: Include description and test results
+
+## Code Generation Architecture
+
+Understanding the code generation flow helps you work effectively with Pseudata:
+
+![Code Generation Flow](/images/codegen-flow.svg)
+
+Pseudata uses TypeSpec as the source of truth and generates code through multiple paths:
+- **Models**: TypeSpec → JSON Schema → quicktype → language-specific classes
+- **Primitives**: TypeSpec → interface-emitter.js → language-specific interfaces
+- **Arrays**: TypeSpec → array-emitter.js → language-specific array classes
+- **Resources**: Text files → resource-emitter.js → embedded language-specific data
+
+## Development Setup
+
+Pseudata uses **Dev Containers** to ensure all contributors have an identical development environment. This eliminates "works on my machine" issues and guarantees consistent builds and tests across all contributions.
+
+### Requirements
+
+1. Install [Docker](https://www.docker.com/products/docker-desktop)
+2. Install [VS Code](https://code.visualstudio.com/)
+3. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+**Note**: While this guide documents VS Code, any [dev container-compatible tool](https://containers.dev/supporting) can be used. See the [full list of supporting tools](https://containers.dev/supporting#tools) for alternatives like JetBrains IDEs, Neovim, and others.
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/pseudata/pseudata.git
+cd pseudata
+
+# Open in VS Code
+code .
+```
+
+When prompted, click **"Reopen in Container"** (or use Command Palette: "Dev Containers: Reopen in Container")
+
+The dev container includes everything pre-configured:
+- Go, Java, Python, Node.js with correct versions
+- All build tools and dependencies
+
+### Working in the Container
+
+```bash
+# The monorepo structure:
+pseudata/                # Main implementation
+├── typespec/            # TypeSpec definitions
+│   ├── src/             # TypeSpec model definitions
+│   ├── lib/             # Custom emitters (interface, array, resource)
+│   └── resources/       # Locale-specific data files
+├── sdks/                # Language SDKs
+│   ├── go/
+│   ├── java/
+│   ├── python/
+│   └── typescript/
+└── fixtures/            # Test vectors
+
+# Run code generation
+make generate
+
+# Run tests for each language
+make test
+
+# See all available make targets
+make
+```
+
+## Code Standards
+
+### Code Quality
+
+- **Follow language conventions**: PascalCase (Go), camelCase (Java/TS), snake_case (Python)
+- **Add documentation**: Doc comments for all public APIs
+- **Handle UTF-8 correctly**: Use rune/character operations, not byte slicing
+- **Match existing patterns**: Study the codebase before implementing
+- **EditorConfig**: The repository includes `.editorconfig` for consistent formatting (indentation, line endings, charset). Your editor will automatically apply these settings.
+
+### Documentation Standards
+
+Follow language-specific documentation conventions for all public APIs:
+
+- **Go**: Use [GoDoc](https://go.dev/blog/godoc) format
+  ```go
+  // Email generates a deterministic email address.
+  // The format is lowercase-username@domain.tld.
+  func (p *PrimitivesImpl) Email() string {
+  ```
+
+- **Java**: Use [JavaDoc](https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html) format
+  ```java
+  /**
+   * Generates a deterministic email address.
+   * The format is lowercase-username@domain.tld.
+   * @return a valid email address string
+   */
+  public String email() {
+  ```
+
+- **Python**: Use [PEP 257](https://peps.python.org/pep-0257/) docstrings
+  ```python
+  def email(self) -> str:
+      """Generate a deterministic email address.
+      
+      The format is lowercase-username@domain.tld.
+      
+      Returns:
+          str: A valid email address string
+      """
+  ```
+
+- **TypeScript**: Use [TSDoc](https://tsdoc.org/) format
+  ```typescript
+  /**
+   * Generates a deterministic email address.
+   * The format is lowercase-username@domain.tld.
+   * @returns A valid email address string
+   */
+  email(): string {
+  ```
+
+### Testing Requirements
+
+- **Fixture tests are mandatory**: All changes must include fixture-based tests
+- **Cross-language consistency**: Verify outputs match across all languages
+- **Edge cases**: Test boundary conditions, empty inputs, special characters
+- **Performance**: Ensure generated data is fast (O(1) for array access)
+
+### Commit Message Convention
+
+Pseudata follows [Conventional Commits](https://www.conventionalcommits.org/) to maintain a clear and structured commit history. This helps with automated changelog generation and makes it easier to understand what each commit does.
+
+#### Format
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+#### Types
+
+- **feat**: A new feature
+- **fix**: A bug fix
+- **docs**: Documentation only changes
+- **style**: Code style changes (formatting, missing semi-colons, etc.)
+- **refactor**: Code change that neither fixes a bug nor adds a feature
+- **perf**: Performance improvement
+- **test**: Adding missing tests or correcting existing tests
+- **chore**: Changes to the build process or auxiliary tools
+
+#### Scopes
+
+Use scopes to indicate which part of the codebase is affected:
+
+- **go**, **java**, **python**, **typescript**, **csharp**, **php**, **rust**, **swift**, **dart**: Language-specific changes
+- **generator**: Changes to the PCG32 generator
+- **primitives**: Changes to primitive methods
+- **arrays**: Changes to array classes
+- **resources**: Changes to locale/resource data
+- **typespec**: Changes to TypeSpec definitions
+- **emitter**: Changes to code generation emitters
+- **fixtures**: Changes to test fixtures
+- **docs**: Documentation changes
+- **website**: Changes to the documentation website
+
+#### Examples
+
+```bash
+# Adding a new feature
+feat(primitives): add hexColor() method
+
+# Fixing a bug
+fix(java): correct UUID generation for large seeds
+
+# Updating documentation
+docs(contributing): add conventional commits section
+
+# Refactoring code
+refactor(typescript): simplify resource loading logic
+
+# Adding tests
+test(fixtures): add edge cases for digit() primitive
+
+# Multiple scopes
+feat(go,java,python,typescript): implement alnum() primitive
+```
+
+#### Breaking Changes
+
+If your commit introduces a breaking change, add `BREAKING CHANGE:` in the footer:
+
+```bash
+feat(primitives): rename int() to nextInt()
+
+BREAKING CHANGE: int() method has been renamed to nextInt() for consistency
+```
+
+### Changelog
+
+Pseudata maintains a changelog following the [Keep a Changelog](https://keepachangelog.com/) format. The changelog provides a human-readable history of notable changes for each version.
+
+#### When to Update the Changelog
+
+Update `CHANGELOG.md` when making user-facing changes:
+
+- **feat**: Add entry under "Added" for new features
+- **fix**: Add entry under "Fixed" for bug fixes
+- **BREAKING CHANGE**: Add entry under "Changed" with clear migration guidance
+- **perf**: Add entry under "Changed" for significant performance improvements
+- **deprecation**: Add entry under "Deprecated" for features being phased out
+
+**Skip changelog updates for**:
+- Internal refactoring (`refactor`)
+- Test changes (`test`)
+- Documentation updates (`docs`)
+- Build/tooling changes (`chore`)
+
+#### Changelog Format
+
+```markdown
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- New `hexColor()` primitive for generating hex color codes
+- Support for Rust language SDK
+
+### Changed
+- Improved performance of `digit()` by 40%
+
+### Fixed
+- UTF-8 handling in `nickname()` for non-ASCII characters
+- UUID generation for large seed values in Java
+
+### Deprecated
+- `emailVerified()` will be removed in v2.0.0, use `probability(0.9)` instead
+
+## [1.0.0] - 2024-01-15
+
+### Added
+- Initial release with Go, Java, Python, and TypeScript support
+...
+```
+
+#### Best Practices
+
+- **Be specific**: Include method names, affected languages, and clear descriptions
+- **User-focused**: Write for library users, not implementation details
+- **Link issues**: Reference GitHub issues when applicable: `(#123)`
+- **Breaking changes first**: Always list breaking changes at the top of a release section
+- **Group by language**: For language-specific changes, group entries together
+
+#### Example Entries
+
+```markdown
+### Added
+- `alnum()` primitive for alphanumeric strings (all languages)
+- Java: Added `BigInteger` support for large world seeds
+
+### Fixed
+- Python: Fixed resource loading for Windows paths
+- TypeScript: Corrected type definitions for `PseudoArray`
+
+### Changed
+- **BREAKING**: Renamed `int()` to `nextInt()` for API consistency (all languages)
+  - Migration: Replace `p.int()` with `p.nextInt()`
+```
+
+### Versioning
+
+Pseudata follows [Semantic Versioning 2.0.0](https://semver.org/) (SemVer):
+
+**Given a version number MAJOR.MINOR.PATCH:**
+
+- **MAJOR** (e.g., 1.0.0 → 2.0.0): Incompatible API changes
+  - Breaking changes to public APIs
+  - Removal of deprecated features
+  - Changes to deterministic output (same seed produces different data)
+
+- **MINOR** (e.g., 1.0.0 → 1.1.0): Backwards-compatible new functionality
+  - New primitives, models, or arrays
+  - New locale/resource support
+  - New language SDK implementations
+  - Performance improvements
+
+- **PATCH** (e.g., 1.0.0 → 1.0.1): Backwards-compatible bug fixes
+  - Bug fixes that don't change the API
+  - Documentation updates
+  - Internal refactoring
+
+**Important**: Because Pseudata is a deterministic data generation library, changes that alter the output for a given seed are considered **BREAKING CHANGES**, even if the API signature remains the same.
+
+#### Pre-release Versions
+
+- **Alpha** (`1.0.0-alpha.1`): Early development, unstable
+- **Beta** (`1.0.0-beta.1`): Feature-complete, testing phase
+- **Release Candidate** (`1.0.0-rc.1`): Final testing before stable release
+
+### License
+
+Pseudata is licensed under the **Apache License 2.0**. By contributing, you agree that your contributions will be licensed under the same terms.
+
+**What this means for contributors:**
+
+- ✅ You retain copyright to your contributions
+- ✅ You grant the project a perpetual, worldwide, non-exclusive license to use your code
+- ✅ You confirm you have the right to submit the contribution
+- ✅ Your contributions can be used commercially, modified, and distributed
+- ✅ Patent grants are included (protection against patent claims)
+
+**Key requirements:**
+
+- Include the Apache 2.0 license header in new files (when applicable)
+- Preserve existing copyright notices
+- Document significant changes in NOTICE file (if required)
+
+For the full license text, see [LICENSE](https://github.com/pseudata/pseudata/blob/main/LICENSE) in the repository.
+
+If you're contributing on behalf of your employer, ensure you have permission to contribute code under this license.
+
+### Pull Request Process
+
+1. **Branch naming**: `feature/model-invoice`, `fix/utf8-nickname`, `lang/rust`
+2. **Commit messages**: Follow Conventional Commits format (see above)
+3. **Update CHANGELOG.md**: Add entries for user-facing changes under `[Unreleased]`
+4. **PR description**: Explain what, why, how; include before/after examples
+5. **Tests passing**: All language tests must pass
+6. **Documentation**: Update relevant docs if adding new features
+
+## Getting Help
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/pseudata/pseudata/issues)
+- **GitHub Discussions**: [Ask questions, share ideas](https://github.com/pseudata/pseudata/discussions)
+- **Reference Implementations**: Check existing Go/Java/Python/TypeScript code
+- **TypeSpec Docs**: [typespec.io](https://typespec.io) for TypeSpec questions
+
+## Code of Conduct
+
+Pseudata is committed to providing a welcoming and inclusive environment for all contributors. Please read the [Code of Conduct](/contributing/code-of-conduct/) to understand the standards expected from everyone participating in the Pseudata community.
+
+## Recognition
+
+Contributors are recognized in:
+- Repository CONTRIBUTORS file
+- Release notes for their contributions
+- GitHub contributor graph
+
+Thank you for helping make Pseudata better! 🎉
+

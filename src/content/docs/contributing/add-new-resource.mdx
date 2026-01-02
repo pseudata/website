@@ -1,0 +1,344 @@
+---
+title: Add a New Resource
+description: Learn how to add locale-specific data resources (names, cities, words) to Pseudata for realistic test data generation.
+sidebar:
+  order: 3
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Add a New Resource to Pseudata",
+        "description": "Learn how to add locale-specific data resources (names, cities, words) to Pseudata for realistic test data generation.",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/contributing/add-new-resource/"
+        }
+      }
+---
+
+Resources are locale-specific data files (names, cities, words) that Pseudata uses to generate realistic, culturally appropriate test data. This guide shows you how to add new resources and make them available across all SDKs.
+
+## Code Generation Flow
+
+Resources follow a different path than models:
+
+![Code Generation Flow](/images/codegen-flow.svg)
+
+**resource-emitter.js** reads your text files from `typespec/resources/` and embeds them directly into the generated SDK code, making them available at runtime without file I/O.
+
+## Resource Hierarchy
+
+Resources are organized by locale:
+
+1. **Locale-specific**: `typespec/resources/en_US/cities.txt`
+2. **Language-level**: `typespec/resources/en/adjectives.txt`
+3. **Country-level**: `typespec/resources/US/timezones.txt`
+4. **Global**: `typespec/resources/email_domains.txt`
+
+## Step 1: Determine Resource Type
+
+Choose the appropriate level for your resource:
+
+**Locale-specific (en_US, fr_FR, ja_JP)**
+- Given names and family names
+- City names
+- Street names
+- Data that varies by both language and country
+
+**Language-level (en, fr, ja)**
+- Common nouns, adjectives, verbs
+- Generic words for that language
+- Data that's language-dependent but not country-specific
+
+**Country-level (US, GB, JP)**
+- Phone number formats
+- Postal code patterns
+- Timezones
+- Data that's country-dependent but not language-specific
+
+**Global**
+- Email domains
+- File extensions
+- Data that's universal across all locales
+
+## Step 2: Add Resource File
+
+Create a text file with one entry per line. Let's add job titles as an example.
+
+For locale-specific resources (US English):
+
+```bash
+# Create en_US directory if it doesn't exist
+mkdir -p typespec/resources/en_US
+
+# Add job titles specific to US market
+cat > typespec/resources/en_US/job_titles.txt << EOF
+Software Engineer
+Product Manager
+Data Scientist
+UX Designer
+DevOps Engineer
+Sales Executive
+Marketing Director
+EOF
+```
+
+For language-level resources (English in general):
+
+```bash
+# Create en directory if it doesn't exist
+mkdir -p typespec/resources/en
+
+# Add generic English job titles
+cat > typespec/resources/en/job_titles.txt << EOF
+Manager
+Engineer
+Designer
+Analyst
+Consultant
+Director
+Coordinator
+EOF
+```
+
+## Step 3: Update Resources Model
+
+Add a field to the `Resources` model in `typespec/src/pseudata.tsp`:
+
+```typescript
+model Resources {
+  // ... existing fields like givenMaleNames, cities, etc. ...
+  
+  /**
+   * List of job titles.
+   * Used for generating professional titles.
+   */
+  jobTitles: string[];
+}
+```
+
+## Step 4: Update Resource Emitter
+
+Modify `typespec/lib/resource-emitter.js` to load your new resource.
+
+Find the `loadResourcesForLocale()` function and add your resource to the returned object:
+
+```javascript
+return {
+  // ... existing resources ...
+  givenMaleNames: loadResourceFile(locale, country, language, "given_male_names.txt") || [],
+  givenFemaleNames: loadResourceFile(locale, country, language, "given_female_names.txt") || [],
+  
+  // Add your new resource
+  jobTitles: loadResourceFile(locale, country, language, "job_titles.txt") || [],
+};
+```
+
+## Step 5: Create Primitive (Optional)
+
+If you want a dedicated primitive method for easy access:
+
+Add the signature to `typespec/src/primitives.tsp`:
+
+```typescript
+interface Primitives {
+  // ... existing primitives ...
+  
+  /**
+   * Generates a job title.
+   * Selected from locale-specific job titles pool.
+   */
+  jobTitle(): string;
+}
+```
+
+Then implement in all supported languages:
+
+```go
+// Go - primitives_impl.go
+func (p *PrimitivesImpl) JobTitle() string {
+    data := p.resources()
+    titles := data.JobTitles
+    return p.Element(titles)
+}
+```
+
+```java
+// Java - PrimitivesImpl.java
+@Override
+public String jobTitle() {
+    Resources data = resources();
+    String[] titles = data.jobTitles;
+    return element(titles);
+}
+```
+
+```python
+# Python - primitives_impl.py
+def job_title(self) -> str:
+    """Generates a job title."""
+    data = self._resources()
+    titles = data["jobTitles"]
+    return self.element(titles)
+```
+
+```typescript
+// TypeScript - primitives-impl.ts
+jobTitle(): string {
+  const data = this.resources();
+  const titles = data.jobTitles;
+  return this.element(titles);
+}
+```
+
+## Step 6: Run Code Generation
+
+Generate the updated SDK code:
+
+```bash
+cd typespec
+npm run generate
+```
+
+### What Gets Generated
+
+- **`resources.{go,java,py,ts}`**: Updated with `jobTitles` field
+- Resource data embedded directly in code for all locales that have the file
+- No runtime file I/O needed
+
+## Usage
+
+Access resources directly from code:
+
+```go
+// Go - Direct access
+data := p.resources()
+titles := data.JobTitles
+title := titles[index % len(titles)]
+```
+
+Or use via primitive in models:
+
+```typescript
+model Employee {
+  @generator("id")
+  id: string;
+  
+  @generator("jobTitle")
+  job: string;
+}
+```
+
+Or in templates:
+
+```typescript
+model Employee {
+  @generator("id")
+  id: string;
+  
+  @template("{jobTitle} at {companyName}")
+  title: string;
+}
+```
+
+## Fixture-Based Testing
+
+If you created a new primitive that uses your resource, add fixture tests to ensure cross-language consistency. See the [Testing Guide](/contributing/testing/) for details on how fixture-based testing works.
+
+### Why Test Resources
+
+Resources have language-specific access patterns that must be tested:
+- **Loading**: Resource file must exist and be embedded correctly
+- **Access**: Dictionary vs. property syntax varies by language
+- **Determinism**: Same seed must select same item from resource array
+
+### Resource Fixture Structure
+
+Test the primitive that uses your resource:
+
+```json
+{
+  "testCases": [
+    {
+      "name": "jobTitle_en_US",
+      "worldSeed": 42,
+      "typeSeq": 0,
+      "index": 0,
+      "locale": "en_US",
+      "expected": "Software Engineer"
+    },
+    {
+      "name": "jobTitle_different_seed",
+      "worldSeed": 100,
+      "typeSeq": 0,
+      "index": 0,
+      "locale": "en_US",
+      "expected": "Product Manager"
+    }
+  ]
+}
+```
+
+### Adding Resource Tests
+
+1. Add test in Go (`primitives_test.go`):
+
+```go
+func TestJobTitleFixtures(t *testing.T) {
+    fixture := loadFixture("fixtures/primitives_test_vectors.json")
+    
+    for _, tc := range fixture.TestCases {
+        p := NewPrimitivesImpl(tc.WorldSeed, tc.TypeSeq, tc.Index)
+        // Set locale if needed
+        got := p.JobTitle()
+        assert.Equal(t, tc.Expected, got, tc.Name)
+    }
+}
+```
+
+2. Run `go test -update` to generate/update fixtures
+
+3. Implement equivalent tests in other languages
+
+This catches resource loading bugs, access pattern errors, and ensures deterministic selection across all SDKs.
+
+## Best Practices
+
+**File Format**
+- One entry per line
+- UTF-8 encoding
+- No empty lines (they'll be included as empty strings)
+- Trim whitespace from entries
+
+**Naming Conventions**
+- Use snake_case for file names: `job_titles.txt`, `street_suffixes.txt`
+- Match the TypeSpec field name: `jobTitles` → `job_titles.txt`
+
+**Resource Size**
+- Keep files under 10MB for faster compilation
+- For large datasets, consider splitting into multiple resources
+- Resources are embedded in code, so size affects binary size
+
+**Locale Coverage**
+- Start with `en_US` as the reference implementation
+- Add other locales incrementally based on need
+- Each locale must have its own complete resource files
+

@@ -1,0 +1,157 @@
+---
+title: Add a New Locale
+description: Learn how to add support for a new country or locale to Pseudata by providing localized data files.
+sidebar:
+  order: 4
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Add a New Locale to Pseudata",
+        "description": "Learn how to add support for a new country or locale to Pseudata by providing localized data files.",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/contributing/add-new-locale/"
+        }
+      }
+---
+
+Adding a new locale involves collecting realistic data (names, cities, streets) and formatting rules for a specific country or region. Unlike adding a new resource type, this is primarily a data collection task.
+
+## The Locale Checklist
+
+A complete locale implementation requires several files organized into directories representing the **locale** (e.g., `fr_FR`), **language** (e.g., `fr`), and **country** (e.g., `FR`).
+
+### Required Locale Files
+**Path**: `typespec/resources/{locale}/`
+
+| File | Description | Example |
+| :--- | :--- | :--- |
+| `given_male_names.txt` | Common male first names | Jean, Pierre, Lucas |
+| `given_female_names.txt` | Common female first names | Marie, Léa, Camille |
+| `family_names.txt` | Common surnames | Martin, Bernard, Dubois |
+| `cities.txt` | Major cities in this region | Paris, Lyon, Marseille |
+| `streets.txt` | Common street names | Rue de la Paix, Avenue Victor Hugo |
+| `zipcodes.txt` | Examples of valid postal codes | 75001, 69002 |
+| `name_format.txt` | How names are ordered | `{given_name} {family_name}` |
+
+### Required Language Files
+**Path**: `typespec/resources/{language}/`
+
+| File | Description | Example |
+| :--- | :--- | :--- |
+| `nouns.txt` | Common nouns in this language | livre, table, chaise |
+| `adjectives.txt` | Common adjectives | beau, grand, petit |
+| `verbs.txt` | Common verbs | manger, dormir, aller |
+
+### Required Country Files
+**Path**: `typespec/resources/{country}/`
+
+| File | Description | Example |
+| :--- | :--- | :--- |
+| `address_format.txt` | How addresses are ordered | `{street}\n{zip} {city}` |
+| `street_format.txt` | How street numbers/names combine| `{number} {street}` |
+| `phone_number_patterns.txt`| Patterns for valid phones | `0# ## ## ## ##` |
+| `timezones.txt` | Valid IANA timezone names | `Europe/Paris` |
+
+## Step 1: Create Directory Structure
+
+Localized data can be organized at three levels depending on how specific the data is:
+
+### 1. Locale Level (`language_COUNTRY`)
+Use this for data that varies by both language and country (e.g., `en_US` vs `en_GB`). This is where most names and cities belong.
+```bash
+mkdir typespec/resources/fr_FR
+```
+
+### 2. Language Level (`language`)
+Use this for data that is the same for all countries speaking that language (e.g., common nouns, adjectives).
+```bash
+mkdir typespec/resources/fr
+```
+
+### 3. Country Level (`COUNTRY`)
+Use this for data that is specific to a country but independent of the language (e.g., phone formats, timezones).
+```bash
+mkdir typespec/resources/FR
+```
+
+## Step 2: Prepare Data Files
+
+Each `.txt` file must follow these rules:
+- **Encoding**: Must be UTF-8 without BOM.
+- **Format**: One entry per line.
+- **Cleaning**: No empty lines, no leading/trailing whitespace.
+- **Uniqueness**: Avoid duplicate entries within a file.
+
+Example `fr_FR/cities.txt`:
+```text
+Paris
+Marseille
+Lyon
+Toulouse
+Nice
+```
+
+## Step 3: Formatting Placeholders
+
+Some files use placeholders that are replaced during data generation.
+
+### Address Format
+Used in `address_format.txt`. Common placeholders:
+- `{street_address}`: The combined street number and name.
+- `{locality}`: Usually the city.
+- `{region}`: State, province, or department.
+- `{postal_code}`: The zip or postal code.
+- `{country}`: The full country name.
+
+### Phone Number Patterns
+Used in `phone_number_patterns.txt`. Use `#` for a random digit:
+- Example: `(###) ###-####`
+- Example: `+33 # ## ## ## ##`
+
+## Step 4: Generate and Verify
+
+Run the code generation to embed the new data into the SDKs:
+
+```bash
+make generate
+```
+
+Verify that the new locale appears in the generated `AVAILABLE_LOCALES` list in each SDK (e.g., `sdks/go/resources.go`).
+
+## Fixture-Based Testing
+
+After adding a locale, add a few test cases to the **Testing Guide** to ensure it's working correctly across all languages.
+
+Example fixture for French locale:
+```json
+{
+  "name": "city_fr_FR",
+  "worldSeed": 42,
+  "index": 0,
+  "locale": "fr_FR",
+  "expected": "Paris"
+}
+```
+
+See the [Testing Guide](/contributing/testing/) for details on how to run and update these tests.
+

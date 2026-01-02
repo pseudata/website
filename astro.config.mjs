@@ -149,6 +149,10 @@ export default defineConfig({
           autogenerate: { directory: "reference" },
         },
         {
+          label: "Contributing",
+          autogenerate: { directory: "contributing" },
+        },
+        {
           label: "Blog",
           autogenerate: { directory: "blog" },
         },

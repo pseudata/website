@@ -1,0 +1,1300 @@
+---
+title: "Add a New SDK"
+description: "Complete guide to implementing Pseudata support for a new programming language including TypeSpec emitters, generator, and fixture-based tests"
+sidebar:
+  order: 5
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Add a New SDK to Pseudata",
+        "description": "Complete guide to implementing Pseudata support for a new programming language including TypeSpec emitters, generator, and fixture-based tests",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/contributing/add-new-sdk/"
+        },
+        "keywords": ["contributing", "new language", "TypeSpec", "emitters", "PCG32", "fixture tests"]
+      }
+---
+
+This guide walks through adding support for a new programming language (e.g., Rust, C#, PHP, Ruby) to Pseudata. Use the existing implementations (Go, Java, Python, TypeScript) as reference.
+
+## Quick Summary
+
+Much of the code is generated automatically from TypeSpec definitions. Your main task is to write the foundation code (Generator, SeedFrom, ID Utils) and implement the custom TypeSpec emitters to generate code for your target language.
+
+**What You'll Implement**:
+1. **Generator** - PCG32 random number generator
+2. **SeedFrom** - String to seed conversion
+3. **TypeSpec Emitters** - Code generation for your language
+4. **PseudoArray** - Virtual array base class
+5. **ID Utils** - UUID encoding/decoding
+6. **Primitives** - ~35 data generation methods
+7. **Models** - Auto-generated via quicktype
+
+**Each component has fixture-based tests** to ensure cross-language consistency.
+
+## Code Generation Flow
+
+Pseudata uses a multi-stage code generation pipeline:
+
+![Code Generation Flow](/images/codegen-flow.svg)
+
+### Stage 1: TypeSpec → JSON Schema
+```bash
+tsp compile src  # Generates JSON Schema in tsp-output/
+```
+
+**Output**: `tsp-output/@typespec/json-schema/*.json`
+- `User.json` - User model schema
+- `Address.json` - Address model schema
+- `Resources.json` - Resources model schema
+
+### Stage 2: JSON Schema → Models (via quicktype)
+```bash
+quicktype --src-lang schema \
+  tsp-output/@typespec/json-schema/*.json \
+  -o ../sdks/rust/src/models.rs \
+  --lang rust \
+  --visibility public \
+  --derive-debug
+```
+
+**Output**: `models.{go,java,py,ts,rs}` - Data structures only
+
+### Stage 3: TypeSpec → Code (via custom emitters)
+```bash
+# Automatically runs during tsp compile (configured in tspconfig.yaml)
+```
+
+**Custom Emitters** (in `typespec/lib/`):
+
+1. **`resource-emitter.js`**
+   - Reads files from `typespec/resources/` directory
+   - Generates: `resources.{go,java,py,ts}` with embedded data
+   - Includes `AVAILABLE_LOCALES` and `RESOURCES` map
+
+2. **`interface-emitter.js`** (called by array-emitter.js)
+   - Reads `primitives.tsp` interface definition
+   - Generates: `primitives.{go,java,py,ts}` interfaces
+
+3. **`array-emitter.js`**
+   - Reads `@array` decorators on models
+   - Generates: `arrays.{go,java,py,ts}` with generator functions
+   - Example: `UserArray`, `AddressArray`, `generateUser()`, `generateAddress()`
+
+**Configuration** (`tspconfig.yaml`):
+```yaml
+emit:
+  - "@typespec/json-schema"        # Stage 1: JSON Schema
+  - "../lib/emitter.js"            # Stage 3: Custom emitters
+```
+
+### Complete Generation Command
+```bash
+cd typespec
+npm run generate
+```
+
+**This runs**:
+1. `tsp compile src` - TypeSpec → JSON Schema + custom emitters
+2. `quicktype` - JSON Schema → Models for all languages
+3. Post-processing (e.g., `fix-resources-visibility.js` for Java)
+
+## Directory Structure
+
+```
+sdks/
+  rust/                          # Example: Adding Rust
+    src/
+      generator.rs               # PCG32 implementation
+      seed_from.rs              # String → seed conversion
+      id_utils.rs               # PseudoID encode/decode
+      primitives.rs             # Generated interface
+      primitives_impl.rs        # Implementation
+      models.rs                 # Generated models
+      arrays.rs                 # Generated arrays
+      pseudo_array.rs           # Generic array base
+      resources.rs              # Generated resources
+      lib.rs                    # Public exports
+    tests/
+      generator_test.rs         # Fixture tests
+      seed_test.rs              # Fixture tests
+      id_test.rs                # Fixture tests
+      primitives_vectors_test.rs # Fixture tests
+      array_user_vectors_test.rs # Fixture tests
+      array_address_vectors_test.rs # Fixture tests
+    Cargo.toml
+    README.md
+```
+
+## Implementation Guide
+
+### Implementation Sequence
+
+Components should be implemented in order, as later components depend on earlier ones:
+
+```
+1. Generator (PCG32)          - Core random number generator
+   ↓
+2. SeedFrom                   - String to seed conversion
+   ↓
+3. TypeSpec Emitters          - Code generation for your language
+   ├─ resource-emitter.js     (embeds locale data)
+   ├─ interface-emitter.js    (generates Primitives interface)
+   └─ array-emitter.js        (generates array classes)
+   ↓
+4. PseudoArray                - Virtual array wrapper
+   ↓
+5. ID Utils                   - UUID encoding/decoding
+   ↓
+6. Primitives Implementation  - Implement generated interface
+   ↓
+7. Models (via quicktype)     - Auto-generated data structures
+   ↓
+8. Array Fixture Tests        - End-to-end verification
+```
+
+---
+
+## Step 1: Generator (PCG32 Algorithm)
+
+**What**: Deterministic random number generator using PCG32 algorithm.
+
+**Reference**: 
+- Go: `generator.go`
+- Specification: `fixtures/pcg32_test_vectors.json`
+
+**Key Methods**:
+```rust
+// Example signatures (adjust to language idioms)
+struct Generator {
+    state: u64,
+    inc: u64,
+}
+
+impl Generator {
+    fn new(seed: u64, seq: u64) -> Self;
+    fn advance(&mut self, delta: u64);
+    fn next_int(&mut self) -> u32;
+    fn intn(&mut self, n: i32) -> i32;
+    fn probability(&mut self, p: f32) -> bool;
+    fn next_float(&mut self) -> f32;
+    fn next_bool(&mut self) -> bool;
+    fn int_range(&mut self, min: i32, max: i32) -> i32;
+    fn float_range(&mut self, min: f32, max: f32) -> f32;
+    fn uuid(&mut self) -> String;
+}
+```
+
+**Implementation Requirements**:
+- **PCG32 state**: 64-bit state + 64-bit increment (must be odd)
+- **Advance**: Jump to arbitrary position in O(log n) time
+- **Bounded random**: `intn(n)` must use unbiased method (rejection sampling)
+- **UUID v4**: Generate RFC 4122 compliant UUIDs
+
+**Test**: `fixtures/pcg32_test_vectors.json`
+- 12 test vectors covering various seeds, sequences, and advance operations
+- Must match exact output sequences across all languages
+
+**Example Test Pattern**:
+```rust
+#[test]
+fn test_generator_with_vectors() {
+    let vectors: Vec<TestCase> = load_json("../../fixtures/pcg32_test_vectors.json");
+    
+    for tc in vectors {
+        let mut gen = Generator::new(tc.inputs.seed, tc.inputs.seq);
+        gen.advance(tc.inputs.advance);
+        
+        for (i, expected) in tc.expected.outputs.iter().enumerate() {
+            assert_eq!(gen.next_int(), *expected, "Output {} mismatch", i);
+        }
+    }
+}
+```
+
+---
+
+## Step 2: SeedFrom (String → Seed Conversion)
+
+**What**: Deterministic conversion from strings to 64-bit seeds.
+
+**Reference**: 
+- Go: `seed_from.go`
+- Algorithm: FNV-1a hash
+
+**Key Function**:
+```rust
+fn seed_from(s: &str) -> u64 {
+    const OFFSET_BASIS: u64 = 14695981039346656037;
+    const FNV_PRIME: u64 = 1099511628211;
+    
+    let mut hash = OFFSET_BASIS;
+    for byte in s.bytes() {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
+}
+```
+
+**Test**: `fixtures/seed_test_vectors.json`
+- 18 test cases including empty strings, ASCII, Unicode, long strings
+- Must produce identical seeds across all languages
+
+**Critical**: Handle UTF-8 correctly. The input is UTF-8 bytes, not characters.
+
+---
+
+## Step 3: TypeSpec Emitters
+
+TypeSpec emitters are TypeScript programs that generate code for your language. They read TypeSpec definitions and generate Primitives interfaces, Arrays, and Resources.
+
+**Why Custom Emitters?**
+- **Primitives**: Interface only (implementation is hand-written)
+- **Arrays**: Need generator functions with `@generator` decorator logic
+- **Resources**: Embed file data from `typespec/resources/` directory
+- Quicktype only generates data models, not these specialized components
+
+### Emitter Architecture
+
+```javascript
+// typespec/lib/emitter.js - Entry point called by tsp compile
+export async function $onEmit(context) {
+    await emitVirtualArrays(context);    // → Primitives interface + Arrays
+    await emitResourceData(context);     // → Resources
+}
+```
+
+**Location**: `typespec/lib/`
+
+**Three files to modify**:
+1. `resource-emitter.js` - Embed locale data
+2. `interface-emitter.js` - Generate Primitives trait/interface  
+3. `array-emitter.js` - Generate array classes + generator functions
+
+**Configuration** (`tspconfig.yaml`):
+```yaml
+emit:
+  - "@typespec/json-schema"        # Built-in: Models → JSON Schema
+  - "../lib/emitter.js"            # Custom: Everything else
+```
+
+### 3.1 Resource Emitter
+
+**Purpose**: Read files from `typespec/resources/` and embed as code
+
+**This generates the largest file** - hundreds of names, cities, etc. per locale
+
+**Input**: Directory structure
+```
+typespec/resources/
+  global/
+    email_domains.txt         → ["gmail.com", "yahoo.com", ...]
+  en/
+    nouns.txt                 → ["book", "table", ...]
+    adjectives.txt
+    verbs.txt
+  en_US/
+    given_male_names.txt      → ["James", "John", "Robert", ...]
+    given_female_names.txt    → ["Mary", "Patricia", ...]
+    family_names.txt
+    cities.txt
+    streets.txt
+    zipcodes.txt
+  US/
+    address_format.txt        → "{street_address}, {locality}, {region} {postal_code}"
+    street_format.txt
+    timezones.txt             → ["America/New_York", "America/Los_Angeles", ...]
+    phone_number_patterns.txt → ["(###) ###-####", "###-###-####"]
+```
+
+**Your Task**: Add Rust resource embedding
+
+**Add to `resource-emitter.js`**:
+```javascript
+// 1. Add Rust resource generation
+function emitRustResources(locales, program) {
+    let rustCode = 'use std::collections::HashMap;\n';
+    rustCode += 'use once_cell::sync::Lazy;\n';
+    rustCode += 'use crate::models::Resources;\n\n';
+    
+    // Available locales constant
+    rustCode += 'pub static AVAILABLE_LOCALES: &[&str] = &[\n';
+    rustCode += locales.map(l => `    "${l}"`).join(',\n') + ',\n';
+    rustCode += '];\n\n';
+    
+    // Resources HashMap
+    rustCode += 'pub static RESOURCES: Lazy<HashMap<&\'static str, Resources>> = Lazy::new(|| {\n';
+    rustCode += '    let mut m = HashMap::new();\n\n';
+    
+    for (const locale of locales) {
+        const resources = loadResourcesForLocale(locale);
+        
+        rustCode += `    m.insert("${locale}", Resources {\n`;
+        rustCode += `        email_domains: vec![${formatRustStringArray(resources.emailDomains)}],\n`;
+        rustCode += `        male_given_names: vec![${formatRustStringArray(resources.maleGivenNames)}],\n`;
+        rustCode += `        female_given_names: vec![${formatRustStringArray(resources.femaleGivenNames)}],\n`;
+        rustCode += `        other_given_names: vec![${formatRustStringArray(resources.otherGivenNames)}],\n`;
+        rustCode += `        family_names: vec![${formatRustStringArray(resources.familyNames)}],\n`;
+        rustCode += `        cities: vec![${formatRustStringArray(resources.cities)}],\n`;
+        rustCode += `        streets: vec![${formatRustStringArray(resources.streets)}],\n`;
+        rustCode += `        nouns: vec![${formatRustStringArray(resources.nouns)}],\n`;
+        rustCode += `        adjectives: vec![${formatRustStringArray(resources.adjectives)}],\n`;
+        rustCode += `        verbs: vec![${formatRustStringArray(resources.verbs)}],\n`;
+        rustCode += `        zipcodes: vec![${formatRustStringArray(resources.zipcodes)}],\n`;
+        rustCode += `        states: vec![${formatRustStringArray(resources.states)}],\n`;
+        rustCode += `        address_format: "${resources.addressFormat}".to_string(),\n`;
+        rustCode += `        street_format: "${resources.streetFormat}".to_string(),\n`;
+        rustCode += `        timezones: vec![${formatRustStringArray(resources.timezones)}],\n`;
+        rustCode += `        phone_number_patterns: vec![${formatRustStringArray(resources.phoneNumberPatterns)}],\n`;
+        rustCode += `    });\n\n`;
+    }
+    
+    rustCode += '    m\n';
+    rustCode += '});\n';
+    
+    return rustCode;
+}
+
+function formatRustStringArray(arr) {
+    return arr.map(s => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}".to_string()`).join(', ');
+}
+
+// 2. Register Rust in emitResourceData()
+export async function emitResourceData(context) {
+    const locales = ["ar_SA", "de_DE", "en_CA", "en_GB", "en_US", /* ... */];
+    
+    // Add Rust
+    const rustCode = emitRustResources(locales, program);
+    await program.host.writeFile("sdks/rust/src/resources.rs", rustCode);
+    
+    // ... existing Go, Java, Python, TypeScript
+}
+```
+
+**Example Output** (Rust, truncated):
+```rust
+// sdks/rust/src/resources.rs (auto-generated, ~3000 lines)
+use std::collections::HashMap;
+use once_cell::sync::Lazy;
+use crate::models::Resources;
+
+pub static AVAILABLE_LOCALES: &[&str] = &[
+    "ar_SA",
+    "de_DE",
+    "en_CA",
+    "en_GB",
+    "en_US",
+    "es_MX",
+    "fr_CA",
+    "fr_FR",
+    "hi_IN",
+    "hu_HU",
+    "ja_JP",
+    "pt_BR",
+    "tr_TR",
+    "vi_VN",
+    "zh_CN",
+];
+
+pub static RESOURCES: Lazy<HashMap<&'static str, Resources>> = Lazy::new(|| {
+    let mut m = HashMap::new();
+
+    m.insert("en_US", Resources {
+        email_domains: vec!["gmail.com".to_string(), "yahoo.com".to_string(), /* ... */],
+        male_given_names: vec!["James".to_string(), "Robert".to_string(), /* ... */],
+        female_given_names: vec!["Mary".to_string(), "Patricia".to_string(), /* ... */],
+        // ... all other fields
+    });
+
+    m.insert("ar_SA", Resources {
+        email_domains: vec!["gmail.com".to_string(), /* ... */],
+        male_given_names: vec!["محمد".to_string(), "أحمد".to_string(), /* ... */],
+        // ... UTF-8 encoded Arabic names
+    });
+
+    // ... all 14 other locales
+
+    m
+});
+```
+
+**Important**:
+- **UTF-8 encoding**: Properly escape strings (Arabic, Chinese, etc.)
+- **String ownership**: `.to_string()` for Rust ownership
+- **Lazy initialization**: Use `once_cell::Lazy` for static initialization
+- **Large file**: ~3000 lines, 200KB+, generated from ~50 resource files
+
+**Resource File Resolution**:
+```javascript
+// resource-emitter.js logic
+function getResourceFile(locale, country, language, filename) {
+    // Try locale-specific first: ar_SA/given_male_names.txt
+    if (exists(`resources/${locale}/${filename}`)) return read(locale);
+    
+    // Try language-level: ar/nouns.txt
+    if (exists(`resources/${language}/${filename}`)) return read(language);
+    
+    // Try country-level: SA/timezones.txt  
+    if (exists(`resources/${country}/${filename}`)) return read(country);
+    
+    // Try global: global/email_domains.txt
+    if (exists(`resources/global/${filename}`)) return read(global);
+    
+    // Fallback: empty or error
+    return [];
+}
+```
+
+### 3.2 Interface Emitter
+
+**Purpose**: Generate Primitives trait/interface from TypeSpec definition
+
+**Called by**: `array-emitter.js` (automatically)
+
+**Input**: `primitives.tsp` interface
+```typescript
+interface Primitives {
+    id(): string;
+    gender(): string;
+    locale(): string;
+    element(items: string[]): string;
+    digit(length: int32): string;
+    probability(p: float32): boolean;
+    // ... ~35 methods total
+}
+```
+
+**Your Task**: Add Rust type mapping and code generation
+
+**Add to `interface-emitter.js`**:
+```javascript
+// 1. Add Rust type mapping
+function mapRustType(tspType) {
+    if (tspType.endsWith('[]')) {
+        const elementType = tspType.slice(0, -2);
+        return `Vec<${mapRustType(elementType)}>`;
+    }
+    const typeMap = {
+        string: "String",
+        int32: "i32",
+        int64: "i64",
+        uint32: "u32",
+        uint64: "u64",
+        float32: "f32",
+        float64: "f64",
+        boolean: "bool",
+        numeric: "f64",
+    };
+    return typeMap[tspType] || "String";
+}
+
+// 2. Add Rust interface generation
+function emitRustInterface(interfaceName, methods) {
+    const methodDecls = methods.map(m => {
+        const params = m.parameters
+            .map(p => `${snakeCase(p.name)}: ${mapRustType(p.type)}`)
+            .join(', ');
+        const returnType = mapRustType(m.returnType);
+        return `    fn ${snakeCase(m.name)}(&self${params ? ', ' + params : ''}) -> ${returnType};`;
+    }).join('\n');
+    
+    return `pub trait ${interfaceName} {\n${methodDecls}\n}`;
+}
+
+// 3. Register Rust in emitAllInterfaces()
+async function emitAllInterfaces(program, interfaces) {
+    // ... existing Go, Java, Python, TypeScript
+    
+    // Add Rust
+    const rustCode = interfaces.map(i => 
+        emitRustInterface(i.name, i.methods)
+    ).join('\n\n');
+    
+    await program.host.writeFile(
+        "sdks/rust/src/primitives.rs",
+        rustCode
+    );
+}
+```
+
+**Example Output** (Rust):
+```rust
+// sdks/rust/src/primitives.rs (auto-generated)
+pub trait Primitives {
+    fn id(&self) -> String;
+    fn uuid(&self) -> String;
+    fn gender(&self) -> String;
+    fn locale(&self) -> String;
+    fn element(&self, items: Vec<String>) -> String;
+    fn digit(&self, length: i32) -> String;
+    fn letter(&self, length: i32) -> String;
+    fn alnum(&self, length: i32) -> String;
+    fn probability(&self, p: f32) -> bool;
+    fn next_int(&self) -> i64;
+    fn intn(&self, n: i32) -> i32;
+    fn next_float(&self) -> f32;
+    fn next_boolean(&self) -> bool;
+    fn int_range(&self, min: i32, max: i32) -> i32;
+    fn float_range(&self, min: f32, max: f32) -> f32;
+    // ... ~20 more methods
+}
+```
+
+**Type Mapping Table**:
+| TypeSpec | Go | Java | Python | TypeScript | Rust (example) |
+|----------|-----|------|--------|------------|----------------|
+| `string` | `string` | `String` | `str` | `string` | `String` |
+| `string[]` | `[]string` | `String[]` | `list[str]` | `string[]` | `Vec<String>` |
+| `int32` | `int64` | `int` | `int` | `number` | `i32` |
+| `int64` | `int64` | `long` | `int` | `number` | `i64` |
+| `float32` | `float32` | `float` | `float` | `number` | `f32` |
+| `boolean` | `bool` | `boolean` | `bool` | `boolean` | `bool` |
+
+**Testing**:
+```bash
+cd typespec
+npm run generate
+# Check: sdks/rust/src/primitives.rs should be created
+```
+
+### 3.3 Array Emitter
+
+**Purpose**: Generate array classes and generator functions from `@array` decorators
+
+This emitter parses `@generator` decorators and generates field assignment code.
+
+**Input**: TypeSpec model with decorators
+```typescript
+// pseudata.tsp
+@array(101)
+model User {
+    @generator("id") id: string;
+    @generator("id") sub: string;
+    @generator("compositeUserName") name: string;
+    @generator("genderedGivenName") given_name: string;
+    @generator("familyName") family_name: string;
+    @generator("middleName") middle_name: string;
+    @generator("nickname") nickname: string;
+    @generator("preferredUsername") preferred_username: string;
+    @generator("email") email: string;
+    @generator("gender") gender: string;
+    @generator("locale") locale: string;
+    @generator("avatarUrl") picture: string;
+    @generator("profileUrl") profile: string;
+    @generator("websiteUrl") website: string;
+    @generator("probability", 0.85) email_verified: boolean;
+    @generator("birthdate") birthdate: string;
+    @generator("zoneinfo") zoneinfo: string;
+    @generator("phoneNumber") phone_number: string;
+    @generator("probability", 0.75) phone_number_verified: boolean;
+    @generator("updatedAt") updated_at: int32;
+}
+```
+
+**Your Task**: Add Rust array generation
+
+**Add to `array-emitter.js`**:
+```javascript
+// 1. Add Rust argument formatting
+function formatRustArg(arg, paramType) {
+    if (typeof arg === 'string') {
+        return `"${arg.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    } else if (typeof arg === 'boolean') {
+        return arg ? 'true' : 'false';
+    } else if (typeof arg === 'number') {
+        // Rust: f32 suffix for floats
+        return Number.isInteger(arg) ? arg.toString() : `${arg}_f32`;
+    }
+    return String(arg);
+}
+
+// 2. Add Rust array class generation
+function emitRustArrays(models, program) {
+    let rustCode = 'use crate::{PseudoArray, PrimitivesImpl, models::*};\n\n';
+    
+    for (const model of models) {
+        const typeSeq = model.decorators.array;
+        const className = `${model.name}Array`;
+        
+        // Array struct
+        rustCode += `pub struct ${className} {\n`;
+        rustCode += `    inner: PseudoArray<${model.name}>,\n`;
+        rustCode += `}\n\n`;
+        
+        // Constructor
+        rustCode += `impl ${className} {\n`;
+        rustCode += `    pub fn new(seed: u64) -> Self {\n`;
+        rustCode += `        Self {\n`;
+        rustCode += `            inner: PseudoArray::new(seed, ${typeSeq}, generate_${snakeCase(model.name)}),\n`;
+        rustCode += `        }\n`;
+        rustCode += `    }\n\n`;
+        rustCode += `    pub fn at(&self, index: i32) -> ${model.name} {\n`;
+        rustCode += `        self.inner.at(index)\n`;
+        rustCode += `    }\n`;
+        rustCode += `}\n\n`;
+        
+        // Generator function
+        rustCode += `fn generate_${snakeCase(model.name)}(world_seed: u64, type_seq: u64, index: i32) -> ${model.name} {\n`;
+        rustCode += `    let p = PrimitivesImpl::new(world_seed, type_seq, index);\n`;
+        rustCode += `    ${model.name} {\n`;
+        
+        for (const field of model.fields) {
+            const gen = field.decorators.generator;
+            if (!gen) continue;
+            
+            const methodName = snakeCase(gen.methodName);
+            const args = gen.args.map(a => formatRustArg(a)).join(', ');
+            const call = args ? `p.${methodName}(${args})` : `p.${methodName}()`;
+            
+            rustCode += `        ${snakeCase(field.name)}: ${call},\n`;
+        }
+        
+        rustCode += `    }\n`;
+        rustCode += `}\n\n`;
+    }
+    
+    return rustCode;
+}
+
+// 3. Register Rust in main emit function
+export async function $onEmit(context) {
+    // ... parse models with @array decorator
+    
+    // Add Rust generation
+    const rustCode = emitRustArrays(arrayModels, program);
+    await program.host.writeFile("sdks/rust/src/arrays.rs", rustCode);
+    
+    // ... existing Go, Java, Python, TypeScript
+}
+```
+
+**Example Output** (Rust):
+```rust
+// sdks/rust/src/arrays.rs (auto-generated)
+use crate::{PseudoArray, PrimitivesImpl, models::*};
+
+pub struct UserArray {
+    inner: PseudoArray<User>,
+}
+
+impl UserArray {
+    pub fn new(seed: u64) -> Self {
+        Self {
+            inner: PseudoArray::new(seed, 101, generate_user),
+        }
+    }
+    
+    pub fn at(&self, index: i32) -> User {
+        self.inner.at(index)
+    }
+}
+
+fn generate_user(world_seed: u64, type_seq: u64, index: i32) -> User {
+    let p = PrimitivesImpl::new(world_seed, type_seq, index);
+    User {
+        id: p.id(),
+        sub: p.id(),
+        name: p.composite_user_name(),
+        given_name: p.gendered_given_name(),
+        family_name: p.family_name(),
+        middle_name: p.middle_name(),
+        nickname: p.nickname(),
+        preferred_username: p.preferred_username(),
+        email: p.email(),
+        gender: p.gender(),
+        locale: p.locale(),
+        picture: p.avatar_url(),
+        profile: p.profile_url(),
+        website: p.website_url(),
+        email_verified: p.probability(0.85_f32),
+        birthdate: p.birthdate(),
+        zoneinfo: p.zoneinfo(),
+        phone_number: p.phone_number(),
+        phone_number_verified: p.probability(0.75_f32),
+        updated_at: p.updated_at(),
+    }
+}
+
+pub struct AddressArray {
+    inner: PseudoArray<Address>,
+}
+
+impl AddressArray {
+    pub fn new(seed: u64) -> Self {
+        Self {
+            inner: PseudoArray::new(seed, 110, generate_address),
+        }
+    }
+    
+    pub fn at(&self, index: i32) -> Address {
+        self.inner.at(index)
+    }
+}
+
+fn generate_address(world_seed: u64, type_seq: u64, index: i32) -> Address {
+    let p = PrimitivesImpl::new(world_seed, type_seq, index);
+    Address {
+        id: p.id(),
+        formatted: p.formatted_address(),
+        street_address: p.street_address(),
+        locality: p.locality(),
+        region: p.region(),
+        postal_code: p.postal_code(),
+        country: p.country(),
+        locale: p.locale(),
+    }
+}
+```
+
+**Key Points**:
+- **Float literals**: Rust needs `_f32` suffix (Java needs `f`, Python/TS don't)
+- **Snake case**: Convert TypeSpec camelCase to Rust snake_case
+- **Type mapping**: Use your `mapRustType()` function
+- **Error handling**: Validate decorator arguments
+
+### Testing Your Emitters
+
+**After implementing all three emitters**:
+
+```bash
+# 1. Generate code
+cd typespec
+npm run generate
+
+# 2. Check generated files exist
+ls -lh ../sdks/rust/src/
+# Should see: primitives.rs, arrays.rs, resources.rs
+
+# 3. Verify compilation (Rust example)
+cd ../sdks/rust
+cargo check
+# Should compile without errors (models.rs from quicktype required too)
+```
+
+**Common Issues**:
+- **Missing type mapping**: Add to `mapRustType()`
+- **Float literal format**: Check `formatRustArg()`
+- **String escaping**: Handle quotes and backslashes
+- **UTF-8**: Test with Arabic/Chinese resource files
+
+---
+
+## Step 4: PseudoArray (Virtual Array Base Class)
+
+**What**: Generic virtual array that generates elements on-demand via a generator function.
+
+**Reference**: 
+- Go: `pseudo_array.go`
+- TypeScript: `sdks/typescript/src/pseudo-array.ts`
+
+**Core Concept**: O(1) random access without storing elements.
+
+**Example Implementation** (Rust):
+```rust
+pub struct PseudoArray<T> {
+    world_seed: u64,
+    type_seq: u64,
+    generator_fn: fn(u64, u64, i32) -> T,
+}
+
+impl<T> PseudoArray<T> {
+    pub fn new(world_seed: u64, type_seq: u64, generator_fn: fn(u64, u64, i32) -> T) -> Self {
+        Self {
+            world_seed,
+            type_seq,
+            generator_fn,
+        }
+    }
+    
+    pub fn at(&self, index: i32) -> T {
+        (self.generator_fn)(self.world_seed, self.type_seq, index)
+    }
+}
+```
+
+**Used by generated arrays**:
+```rust
+// Generated by array-emitter.js
+pub struct UserArray {
+    inner: PseudoArray<User>,
+}
+
+impl UserArray {
+    pub fn new(seed: u64) -> Self {
+        Self {
+            inner: PseudoArray::new(seed, 101, generate_user),
+        }
+    }
+    
+    pub fn at(&self, index: i32) -> User {
+        self.inner.at(index)
+    }
+}
+```
+
+**No tests needed** - tested via array fixture tests.
+
+---
+
+## Step 5: ID Utils (PseudoID Encoding/Decoding)
+
+**What**: Encode/decode deterministic UUIDs (UUID v8) with embedded metadata.
+
+**Reference**:
+- Go: `id_utils.go`
+- Documentation: [PseudoID](/reference/pseudoid/)
+
+**Bit Layout** (128-bit UUID v8):
+```
+Bits  63..........................0    15..............0  1 0  15..........0  43..................0
+      worldSeed[63:0]                  typeSeq[15:0]     skip  index[43:0]
+UUID: SSSSSSSS-SSSS-8SSS-vSNN-TTTT-IIIIIIIIIIII
+
+v = version bits (1000 = v8)
+skip = 2 reserved bits (must be 0)
+```
+
+**Detailed Format**:
+```
+UUID v8 Format:
+SSSSSSSS-SSSS-8SSS-vvTT-IIIIIIIIII
+
+S = worldSeed (64 bits)
+8 = version nibble (0x8)
+v = variant bits (0b10)
+-- = skip bits (2 bits, must be 0)
+T = typeSeq (16 bits)
+I = index (40 bits)
+
+Visual pattern:
+worldSeed[63:32]  worldSeed[31:16]  8 + worldSeed[15:3]  variant + skip + typeSeq[15:14]  typeSeq[13:0] + index[39:32]  index[31:0]
+```
+
+**Functions to implement**:
+```rust
+fn encode_id(world_seed: u64, type_seq: u16, index: u64) -> String;
+fn decode_id(uuid: &str) -> Option<(u64, u16, u64)>; // (worldSeed, typeSeq, index)
+```
+
+**Validation**: Decode must fail if skip bits != 0 (forward compatibility).
+
+**Test**: `fixtures/id_test_vectors.json`
+- 13 test vectors covering edge cases, bit boundaries, validation
+- Test vector #13 has `should_decode: false` (invalid skip bits)
+
+---
+
+## Step 6: Primitives Implementation
+
+**What**: Data generation methods using Generator and Resources.
+
+**Files**:
+- **Interface** (generated): `primitives.rs` from TypeSpec
+- **Implementation**: `primitives_impl.rs` (hand-written)
+- **Resources**: `resources.rs` (generated from `typespec/resources/`)
+
+**Reference**:
+- Go: `primitives_impl.go`
+- TypeSpec: `typespec/src/primitives.tsp`
+
+**Structure**:
+```rust
+struct PrimitivesImpl {
+    world_seed: u64,
+    type_seq: u64,
+    index: i32,
+}
+
+impl Primitives for PrimitivesImpl {
+    fn rng(&self) -> Generator {
+        Generator::new(self.world_seed, self.type_seq).advance(self.index)
+    }
+    
+    fn id(&self) -> String {
+        encode_id(self.world_seed, self.type_seq as u16, self.index as u64)
+    }
+    
+    fn locale(&self) -> String {
+        let rng = self.rng();
+        AVAILABLE_LOCALES[rng.intn(AVAILABLE_LOCALES.len())]
+    }
+    
+    // ... ~35 more primitive methods
+}
+```
+
+**Critical Pattern**: 
+- **Store `rng()` in local variable** if used more than once in a function
+- Each `rng()` call creates a new generator at the same position
+- Multiple calls without storing = same value repeated!
+
+```rust
+// ❌ WRONG - repeats same character
+fn digit(&self, length: i32) -> String {
+    (0..length).map(|_| self.rng().intn(10).to_string()).collect()
+}
+
+// ✅ Correct - advances through sequence
+fn digit(&self, length: i32) -> String {
+    let mut rng = self.rng(); // Store once
+    (0..length).map(|_| rng.intn(10).to_string()).collect()
+}
+```
+
+**Test**: `fixtures/primitives_test_vectors.json`
+- 12 test cases covering all ~35 primitive methods
+- Generated with Go: `go test -run TestPrimitivesWithVectors -update`
+
+**Resource Access**:
+- Resources are locale-dependent (e.g., `RESOURCES["en_US"]`)
+- Field naming: TypeSpec uses `camelCase`, adjust for language conventions
+- Python uses dict access: `resources["maleGivenNames"]`
+- Java/TS use property access: `resources.maleGivenNames`
+
+---
+
+## Step 7: Models (Auto-generated via quicktype)
+
+**What**: Data structures generated from TypeSpec models via quicktype.
+
+**Reference**:
+- TypeSpec: `typespec/src/pseudata.tsp`
+- Generation: `typespec/package.json` scripts
+
+**Generation Flow**:
+```bash
+# 1. TypeSpec compiles to JSON Schema
+tsp compile src
+# Output: tsp-output/@typespec/json-schema/User.json, Address.json
+
+# 2. Quicktype generates models from JSON Schema
+quicktype --src-lang schema \
+  tsp-output/@typespec/json-schema/*.json \
+  -o ../sdks/rust/src/models.rs \
+  --lang rust \
+  --visibility public \
+  --derive-debug
+```
+
+**Quicktype Options by Language**:
+```bash
+# Go
+quicktype --lang go --package pseudata --just-types-and-package
+
+# Java  
+quicktype --lang java --package dev.pseudata --just-types
+
+# Python
+quicktype --lang python --just-types
+
+# TypeScript
+quicktype --lang typescript --just-types
+
+# Rust (example)
+quicktype --lang rust --visibility public --derive-debug
+```
+
+**What quicktype generates**:
+- Data structures (User, Address, Resources)
+- JSON serialization/deserialization
+- Type annotations
+
+**What quicktype does NOT generate**:
+- Primitives interface (custom emitter)
+- Array implementations (custom emitter)
+- Resource data (custom emitter)
+- Generator functions (custom emitter)
+
+**Example Output**:
+```rust
+#[derive(Serialize, Deserialize, Debug)]
+pub struct User {
+    pub id: String,
+    pub sub: String,
+    pub name: String,
+    pub given_name: String,
+    pub family_name: String,
+    pub middle_name: String,
+    pub nickname: String,
+    pub preferred_username: String,
+    pub email: String,
+    pub gender: String,
+    pub locale: String,
+    pub picture: String,
+    pub profile: String,
+    pub website: String,
+    pub email_verified: bool,
+    pub birthdate: String,
+    pub zoneinfo: String,
+    pub phone_number: String,
+    pub phone_number_verified: bool,
+    pub updated_at: i32,
+}
+```
+
+---
+
+## Step 8: Array Fixture Tests
+
+**What**: End-to-end verification using fixture-based testing.
+
+**Test**: 
+- `fixtures/array_user_test_vectors.json`
+- `fixtures/array_address_test_vectors.json`
+
+**TypeSeq Values**:
+- `101` - UserArray
+- `110` - AddressArray
+- Custom arrays start from `1024`
+
+**Array Test Pattern**:
+```rust
+// Generated from TypeSpec @array decorator
+struct UserArray {
+    inner: PseudoArray<User>,
+}
+
+impl UserArray {
+    fn new(seed: u64) -> Self {
+        Self {
+            inner: PseudoArray::new(seed, 101, generate_user),
+        }
+    }
+    
+    fn at(&self, index: i32) -> User {
+        self.inner.at(index)
+    }
+}
+
+fn generate_user(world_seed: u64, type_seq: u64, index: i32) -> User {
+    let p = PrimitivesImpl::new(world_seed, type_seq, index);
+    User {
+        id: p.id(),
+        sub: p.id(),
+        name: p.composite_user_name(),
+        given_name: p.gendered_given_name(),
+        // ... populate all 20 fields
+    }
+}
+```
+
+---
+
+## Testing Strategy
+
+### Why Fixture-Based Testing?
+
+Pseudata's core value proposition is **deterministic cross-language consistency**: the same seed must produce identical data in every language. Fixture-based testing is the only way to guarantee this.
+
+Without fixtures, you could have:
+- Go generating `"John Smith"` for seed 42
+- Java generating `"John Smyth"` due to a resource loading bug
+- Each language passing its own tests, but cross-language compatibility broken
+
+Fixtures provide a **single source of truth** that all languages must match exactly. This catches:
+- RNG state bugs (calling `rng()` multiple times incorrectly)
+- UTF-8 handling issues (byte vs. rune slicing)
+- Type mapping errors (signed vs. unsigned integers)
+- Resource access bugs (wrong locale fallback)
+- Formatting inconsistencies (date/phone number patterns)
+
+### Golden Test Pattern
+
+All tests follow the same pattern:
+1. Go generates fixtures with `-update` flag
+2. All languages read and validate against fixtures
+3. Fixtures are committed to the repository
+
+**Test Execution**:
+```bash
+# Generate fixtures (from Go)
+cd /path/to/pseudata
+go test -run TestGeneratorWithVectors -update      # pcg32_test_vectors.json
+go test -run TestSeedFromVectors -update           # seed_test_vectors.json
+go test -run TestIDUtilsWithVectors -update        # id_test_vectors.json
+go test -run TestPrimitivesWithVectors -update     # primitives_test_vectors.json
+go test -run TestUserArrayWithVectors -update      # array_user_test_vectors.json
+go test -run TestAddressArrayWithVectors -update   # array_address_test_vectors.json
+
+# Run tests (Rust example)
+cargo test
+```
+
+### Test File Template
+
+```rust
+use serde::{Deserialize, Serialize};
+use std::fs;
+
+#[derive(Deserialize)]
+struct TestCase {
+    id: i32,
+    description: String,
+    inputs: TestInputs,
+    expected: TestExpected,
+}
+
+#[test]
+fn test_component_with_vectors() {
+    let fixture = fs::read_to_string("../../fixtures/component_test_vectors.json")
+        .expect("Run: cd ../../ && go test -update");
+    
+    let test_cases: Vec<TestCase> = serde_json::from_str(&fixture).unwrap();
+    
+    for tc in test_cases {
+        // ... run test
+        assert_eq!(actual, tc.expected.value, "{} failed", tc.description);
+    }
+}
+```
+
+---
+
+## Package Management
+
+**Create package.json / Cargo.toml / setup.py**:
+```toml
+# Cargo.toml example
+[package]
+name = "pseudata"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = "1.0"
+
+[dev-dependencies]
+# Test dependencies
+```
+
+---
+
+## Documentation
+
+**Create README.md** in SDK directory:
+
+````markdown
+# Pseudata - Rust SDK
+
+Deterministic mock data generation for testing.
+
+## Installation
+```toml
+[dependencies]
+pseudata = "0.0.1"
+```
+
+## Quick Start
+```rust
+use pseudata::{Generator, UserArray, seed_from};
+
+// Generate deterministic users
+let seed = seed_from("test-scenario-1");
+let users = UserArray::new(seed);
+
+let user = users.at(0);
+println!("Email: {}", user.email);
+println!("Name: {}", user.name);
+```
+
+## Running Tests
+```bash
+cargo test
+```
+````
+
+---
+
+## Integration Checklist
+
+- [ ] **Generator**: PCG32 implementation with fixture tests
+- [ ] **SeedFrom**: FNV-1a hash with fixture tests
+- [ ] **Resource Emitter**: Embed locale data from `typespec/resources/`
+- [ ] **Interface Emitter**: Generate Primitives interface
+- [ ] **Array Emitter**: Generate array classes + generator functions
+- [ ] **PseudoArray**: Generic virtual array base class
+- [ ] **ID Utils**: Encode/decode with fixture tests
+- [ ] **Primitives**: Interface + implementation + fixture tests
+- [ ] **Models**: User, Address data structures (auto-generated via quicktype)
+- [ ] **Arrays**: UserArray + AddressArray + fixture tests
+- [ ] **Package**: Published to language package registry
+- [ ] **Documentation**: README with examples
+- [ ] **CI**: Added to GitHub Actions workflow
+
+---
+
+## Common Pitfalls
+
+### 1. RNG State Management
+❌ **Wrong**: Multiple `rng()` calls repeat values
+```rust
+fn bad(&self) -> String {
+    format!("{}{}", self.rng().intn(10), self.rng().intn(10)) // Same digit twice!
+}
+```
+
+✅ **Correct**: Store rng in local variable
+```rust
+fn good(&self) -> String {
+    let mut rng = self.rng();
+    format!("{}{}", rng.intn(10), rng.intn(10)) // Different digits
+}
+```
+
+### 2. UTF-8 Handling
+Ensure byte-level operations for `seed_from`, rune/character operations for text primitives.
+
+### 3. Unsigned Integer Handling
+JavaScript/TypeScript need `json-bigint` for 64-bit integers.
+
+### 4. Float Literal Suffixes
+Java requires `f` suffix on float literals in generated code.
+
+### 5. Resource Field Naming
+Match TypeSpec camelCase: `maleGivenNames` not `male_given_names` in runtime code.
+
+---
+
+## Getting Help
+
+- **Reference Implementations**: Check Go, Java, Python, TypeScript in `sdks/`
+- **Test Vectors**: All fixtures in `fixtures/` directory
+- **TypeSpec**: Definitions in `typespec/src/`
+- **GitHub Issues**: Report problems or ask questions
+
+---
+
+## Contributing Your Language
+
+Once implemented and tested:
+1. Create PR with SDK in `sdks/your-language/`
+2. Update main README.md with language listing
+3. Add CI workflow in `.github/workflows/`
+4. Update cross-language compatibility matrix
+
+---
+
+**Last Updated**: 2025-01-02

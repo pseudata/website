@@ -1,0 +1,538 @@
+---
+title: Testing Guide
+description: Comprehensive guide to fixture-based testing in Pseudata for ensuring deterministic cross-language consistency.
+sidebar:
+  order: 6
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Pseudata Testing Guide",
+        "description": "Comprehensive guide to fixture-based testing in Pseudata for ensuring deterministic cross-language consistency.",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/contributing/testing/"
+        }
+      }
+---
+
+Fixture-based testing is the foundation of Pseudata's cross-language consistency guarantee. This guide explains how the testing system works and how to use it effectively.
+
+## Why Fixture-Based Testing?
+
+Pseudata's core value is **deterministic cross-language consistency**: seed 42 must generate identical data in Go, Java, Python, and TypeScript. Traditional unit tests can't guarantee this.
+
+### The Problem with Independent Tests
+
+Without fixtures:
+
+```go
+// Go test
+func TestEmail(t *testing.T) {
+    p := NewPrimitivesImpl(42, 0, 0)
+    email := p.Email()
+    assert.Contains(t, email, "@") // Passes ✅
+}
+```
+
+```java
+// Java test
+@Test
+void testEmail() {
+    var p = new PrimitivesImpl(42, 0, 0);
+    var email = p.email();
+    assertTrue(email.contains("@")); // Passes ✅
+}
+```
+
+Both tests pass, but they could generate **different emails**:
+- Go: `"john.smith@example.com"`
+- Java: `"john.smyth@example.com"` (bug in name generation)
+
+Cross-language consistency is **broken**, but tests are **green**. This is unacceptable for Pseudata.
+
+### The Solution: Shared Test Vectors
+
+Fixtures provide a single source of truth:
+
+```json
+{
+  "testCases": [
+    {
+      "worldSeed": 42,
+      "typeSeq": 0,
+      "index": 0,
+      "expected": {
+        "email": "john.smith@example.com",
+        "name": "John Smith"
+      }
+    }
+  ]
+}
+```
+
+Now both Go and Java must produce **exactly** `"john.smith@example.com"` or the test fails.
+
+## The Golden Test Pattern
+
+Pseudata uses the "golden test" pattern:
+
+1. **Go is the reference implementation** (arbitrary choice, could be any language)
+2. **Run `go test -update`** to generate/update fixture JSON files
+3. **Other languages load these fixtures** and verify their outputs match
+4. **Fixtures are committed to git** as the source of truth
+
+### Why Go as Reference?
+
+- No particular reason—it was implemented first
+- Any language could be the reference
+- The important part is having **one** source of truth
+
+## Test Types
+
+Pseudata has fixtures for each component:
+
+### 1. Generator Tests
+
+**File**: `fixtures/pcg32_test_vectors.json`
+
+**Tests**: PCG32 random number generator
+
+```json
+{
+  "testCases": [
+    {
+      "seed": 42,
+      "calls": 5,
+      "expected": [2881561918, 3063928540, 1199791034, 2487695858, 1084139742]
+    }
+  ]
+}
+```
+
+**What it catches**: RNG implementation bugs, platform differences (endianness, integer size)
+
+### 2. SeedFrom Tests
+
+**File**: `fixtures/seed_test_vectors.json`
+
+**Tests**: String-to-seed conversion
+
+```json
+{
+  "testCases": [
+    {
+      "input": "test-string",
+      "expected": 7508238136726558540
+    },
+    {
+      "input": "hello 世界",
+      "expected": 4858898805854332421
+    }
+  ]
+}
+```
+
+**What it catches**: UTF-8 handling bugs, hash function differences
+
+### 3. ID Utils Tests
+
+**File**: `fixtures/id_test_vectors.json`
+
+**Tests**: PseudoID (UUID v8) encoding/decoding
+
+```json
+{
+  "testCases": [
+    {
+      "worldSeed": 42,
+      "typeSeq": 101,
+      "index": 0,
+      "expected": "01936cf0-a0ca-7950-a16f-115e6af03ab3"
+    }
+  ]
+}
+```
+
+**What it catches**: UUID formatting bugs, bit manipulation errors, timestamp issues
+
+### 4. Primitives Tests
+
+**File**: `fixtures/primitives_test_vectors.json`
+
+**Tests**: All primitive data generation methods
+
+```json
+{
+  "testCases": [
+    {
+      "worldSeed": 42,
+      "typeSeq": 0,
+      "index": 0,
+      "locale": "en_US",
+      "expected": {
+        "id": "01936cf0-a0ca-7950-a16f-115e6af03ab3",
+        "email": "john.smith@example.com",
+        "familyName": "Smith",
+        "genderedGivenName": "John",
+        "digit_5": "84721",
+        "letter_8": "JKMNOPQR",
+        "alnum_10": "A2B3C4D5E6"
+      }
+    }
+  ]
+}
+```
+
+**What it catches**: Primitive implementation bugs, resource access errors, formatting inconsistencies
+
+### 5. Array Tests
+
+**Files**: 
+- `fixtures/array_user_test_vectors.json`
+- `fixtures/array_address_test_vectors.json`
+
+**Tests**: End-to-end model generation
+
+```json
+{
+  "testCases": [
+    {
+      "worldSeed": 42,
+      "index": 0,
+      "expected": {
+        "id": "01936cf0-a0ca-7950-a16f-115e6af03ab3",
+        "name": "John Smith",
+        "given_name": "John",
+        "family_name": "Smith",
+        "email": "john.smith@example.com",
+        "email_verified": true,
+        "phone_number": "+1-555-0123",
+        "phone_number_verified": false
+      }
+    }
+  ]
+}
+```
+
+**What it catches**: Integration bugs, field mapping errors, template expansion issues
+
+## Running Tests
+
+### Generate/Update Fixtures (Go)
+
+From the `pseudata` directory:
+
+```bash
+# Update all fixtures
+go test -update
+
+# Update specific fixtures
+go test -run TestGeneratorWithVectors -update
+go test -run TestSeedFromVectors -update
+go test -run TestIDUtilsWithVectors -update
+go test -run TestPrimitivesWithVectors -update
+go test -run TestUserArrayWithVectors -update
+go test -run TestAddressArrayWithVectors -update
+```
+
+**When to update**:
+- After implementing a new primitive
+- After adding a new model/array
+- After fixing a bug in Go reference implementation
+- When adding new test cases
+
+**Important**: Always review the diff before committing fixture changes!
+
+### Run Tests (All Languages)
+
+```bash
+# Go
+cd pseudata
+go test ./...
+
+# Java
+cd pseudata/sdks/java
+mvn test
+
+# Python
+cd pseudata/sdks/python
+pytest
+
+# TypeScript
+cd pseudata/sdks/typescript
+npm test
+```
+
+## Debugging Test Failures
+
+### Common Failure Patterns
+
+**1. All Languages Fail on Same Test**
+
+**Symptom**: Every language fails the same test case
+
+**Cause**: Fixture is wrong or test case is invalid
+
+**Solution**: 
+- Review the fixture expectation
+- Check if it matches the latest Go implementation
+- Run `go test -update` if Go changed
+
+**2. One Language Fails**
+
+**Symptom**: Go, Python, TypeScript pass; Java fails
+
+**Cause**: Language-specific implementation bug
+
+**Solution**:
+- Compare failing language to Go implementation
+- Check for common issues (see below)
+- Fix the implementation, not the fixture
+
+**3. Fixture Load Error**
+
+**Symptom**: `FileNotFoundError`, `Cannot read file`
+
+**Cause**: Wrong fixture path or missing file
+
+**Solution**:
+- Check relative path from test file
+- Ensure fixture was generated (`go test -update`)
+- Verify file is committed to repository
+
+### Common Implementation Bugs
+
+**RNG State Bug** (Most Common)
+
+```go
+// WRONG - Returns same value multiple times
+x := p.rng().Intn(10)
+y := p.rng().Intn(10) // Same as x!
+
+// CORRECT
+rng := p.rng()
+x := rng.Intn(10)
+y := rng.Intn(10) // Different from x
+```
+
+**UTF-8 Handling Bug**
+
+```go
+// WRONG - Corrupts multi-byte characters
+first := name[0:1] // Breaks with "世界"
+
+// CORRECT
+runes := []rune(name)
+first := string(runes[0:1])
+```
+
+**Unsigned Integer Bug** (Java)
+
+```java
+// WRONG - Java treats as signed
+int value = rng.uint32() % max;
+
+// CORRECT - Treat as unsigned
+long value = Integer.toUnsignedLong(rng.uint32()) % max;
+```
+
+**BigInt Precision Loss** (TypeScript)
+
+```typescript
+// WRONG - Loses precision for large seeds
+const worldSeed = JSON.parse(fixtures).worldSeed; // number
+
+// CORRECT - Use json-bigint
+import JSONbig from 'json-bigint';
+const worldSeed = JSONbig.parse(fixtures).worldSeed; // BigInt
+```
+
+**Resource Access Bug**
+
+```python
+# WRONG - Python uses dictionary access
+names = RESOURCES[locale].givenMaleNames
+
+# CORRECT
+names = RESOURCES[locale]["givenMaleNames"]
+```
+
+### Debugging Workflow
+
+1. **Isolate the failure**:
+   ```bash
+   # Run only the failing test
+   pytest tests/test_primitives.py::test_email
+   ```
+
+2. **Print actual vs expected**:
+   ```python
+   print(f"Expected: {expected}")
+   print(f"Got: {actual}")
+   print(f"Diff: {set(expected) ^ set(actual)}")
+   ```
+
+3. **Compare to Go implementation**:
+   - Open `primitives_impl.go`
+   - Find the corresponding method
+   - Compare logic step-by-step
+
+4. **Check intermediate values**:
+   ```python
+   rng = self._rng()
+   print(f"First random: {rng.intn(100)}")
+   print(f"Second random: {rng.intn(100)}")
+   ```
+
+5. **Test with same seed manually**:
+   ```python
+   # Reproduce exact test conditions
+   p = PrimitivesImpl(42, 0, 0)
+   result = p.email()
+   ```
+
+## Writing Good Fixtures
+
+### Coverage Principles
+
+**Edge Cases**:
+- Seed 0 and maximum seed
+- Index 0 and large indices
+- Empty resources
+- Special characters (UTF-8, emojis)
+
+**Diversity**:
+- Multiple seeds
+- Multiple locales
+- Different data types
+- Boundary conditions
+
+**Clarity**:
+- Descriptive test names
+- One thing per test case
+- Comments for non-obvious expectations
+
+### Example: Comprehensive Primitive Fixtures
+
+```json
+{
+  "testCases": [
+    {
+      "name": "basic_seed_42",
+      "worldSeed": 42,
+      "typeSeq": 0,
+      "index": 0,
+      "locale": "en_US",
+      "expected": {
+        "email": "john.smith@example.com",
+        "familyName": "Smith"
+      }
+    },
+    {
+      "name": "seed_zero",
+      "worldSeed": 0,
+      "typeSeq": 0,
+      "index": 0,
+      "locale": "en_US",
+      "expected": {
+        "email": "alice.jones@example.com",
+        "familyName": "Jones"
+      }
+    },
+    {
+      "name": "large_index",
+      "worldSeed": 42,
+      "typeSeq": 0,
+      "index": 999999,
+      "locale": "en_US",
+      "expected": {
+        "email": "bob.wilson@example.com",
+        "familyName": "Wilson"
+      }
+    },
+    {
+      "name": "japanese_locale",
+      "worldSeed": 42,
+      "typeSeq": 0,
+      "index": 0,
+      "locale": "ja_JP",
+      "expected": {
+        "familyName": "佐藤",
+        "genderedGivenName": "太郎"
+      }
+    }
+  ]
+}
+```
+
+## Best Practices
+
+### Do
+
+- ✅ **Always run Go tests after changes** to catch issues early
+- ✅ **Update fixtures when Go changes** with `go test -update`
+- ✅ **Review fixture diffs carefully** before committing
+- ✅ **Add test cases for new features** immediately
+- ✅ **Test edge cases** (boundary values, empty inputs, special chars)
+- ✅ **Keep fixtures in version control** as source of truth
+
+### Don't
+
+- ❌ **Don't modify fixtures manually** (except adding new test cases)
+- ❌ **Don't skip fixture tests** when implementing features
+- ❌ **Don't change fixtures to make tests pass** (fix the implementation instead)
+- ❌ **Don't commit failing tests** (all languages must pass)
+- ❌ **Don't delete test cases** without good reason (coverage regression)
+
+## Continuous Integration
+
+Pseudata's CI runs all fixture tests on every commit:
+
+```yaml
+# Simplified CI workflow
+jobs:
+  test-go:
+    - go test ./...
+  
+  test-java:
+    - mvn test
+  
+  test-python:
+    - pytest
+  
+  test-typescript:
+    - npm test
+```
+
+**All must pass** before merging a pull request.
+
+## Summary
+
+Fixture-based testing is what makes Pseudata reliable across languages:
+
+1. **Go generates fixtures** (`go test -update`)
+2. **All languages verify against fixtures** (same JSON files)
+3. **Fixtures catch subtle bugs** that traditional tests miss
+4. **Cross-language consistency** is guaranteed, not hoped for
+
+When contributing to Pseudata, remember: **fixtures aren't optional—they're the foundation of Pseudata's cross-language consistency guarantee**.
+

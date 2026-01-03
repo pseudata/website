@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" width="800" height="380">
+  <!-- Background -->
+  <rect width="800" height="380" fill="transparent"/>
+  
+  <!-- Stage 1: Input -->
+  <rect x="40" y="165" width="130" height="50" rx="8" fill="#fff4e1" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="105" y="185" font-family="sans-serif" font-size="12" fill="#8b6914" text-anchor="middle" font-weight="bold">UserArray</text>
+  <text x="105" y="199" font-family="monospace" font-size="9" fill="#8b6914" text-anchor="middle">at(index)</text>
+  
+  <!-- Stage 2: PseudoArray -->
+  <rect x="220" y="165" width="130" height="50" rx="8" fill="#fff4e1" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="285" y="185" font-family="sans-serif" font-size="12" fill="#8b6914" text-anchor="middle" font-weight="bold">PseudoArray</text>
+  <text x="285" y="199" font-family="sans-serif" font-size="9" fill="#8b6914" text-anchor="middle">base class</text>
+  
+  <!-- Stage 3: Primitives -->
+  <rect x="400" y="165" width="130" height="50" rx="8" fill="#e8f5e9" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="465" y="183" font-family="sans-serif" font-size="12" fill="#1b5e20" text-anchor="middle" font-weight="bold">Primitives</text>
+  <text x="465" y="197" font-family="sans-serif" font-size="8" fill="#1b5e20" text-anchor="middle">(Generator, index)</text>
+  
+  <!-- Stage 4: Generator -->
+  <rect x="400" y="90" width="130" height="50" rx="8" fill="#b3d9ff" stroke="#4682b4" stroke-width="2"/>
+  <text x="465" y="107" font-family="sans-serif" font-size="12" fill="#1a5490" text-anchor="middle" font-weight="bold">Generator</text>
+  <text x="465" y="121" font-family="monospace" font-size="9" fill="#1a5490" text-anchor="middle">PCG32</text>
+  <text x="465" y="133" font-family="sans-serif" font-size="8" fill="#1a5490" text-anchor="middle">(worldSeed, typeSeq)</text>
+  
+  <!-- Resources box -->
+  <rect x="400" y="240" width="130" height="40" rx="6" fill="#e8f5e9" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="465" y="258" font-family="sans-serif" font-size="11" fill="#1b5e20" text-anchor="middle" font-weight="bold">Resources</text>
+  <text x="465" y="272" font-family="sans-serif" font-size="9" fill="#1b5e20" text-anchor="middle">locale data</text>
+  
+  <!-- Stage 5: Model -->
+  <rect x="580" y="165" width="130" height="50" rx="8" fill="#f3e5f5" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="645" y="185" font-family="sans-serif" font-size="12" fill="#4a148c" text-anchor="middle" font-weight="bold">Model</text>
+  <text x="645" y="199" font-family="sans-serif" font-size="9" fill="#4a148c" text-anchor="middle">composed object</text>
+  
+  <!-- Arrows -->
+  <!-- UserArray to PseudoArray -->
+  <path d="M 170 190 L 220 190" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="195" y="185" font-family="sans-serif" font-size="9" fill="#666" text-anchor="middle">extends</text>
+  
+  <!-- PseudoArray to Primitives -->
+  <path d="M 350 190 L 400 190" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="375" y="182" font-family="sans-serif" font-size="9" fill="#666" text-anchor="middle">passes</text>
+  <text x="375" y="192" font-family="sans-serif" font-size="9" fill="#666" text-anchor="middle">parameters</text>
+  
+  <!-- Primitives instantiates Generator -->
+  <path d="M 465 165 L 465 140" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="495" y="155" font-family="sans-serif" font-size="9" fill="#666" text-anchor="middle">instantiates</text>
+  
+  <!-- Resources accessed by Primitives -->
+  <path d="M 465 215 L 465 240" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="490" y="232" font-family="sans-serif" font-size="9" fill="#666" text-anchor="middle">accesses</text>
+  
+  <!-- Primitives to Model -->
+  <path d="M 530 190 L 580 190" stroke="#7cb3d9" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="555" y="185" font-family="sans-serif" font-size="9" fill="#666" text-anchor="middle">generates</text>
+  
+  <!-- Stage labels -->
+  <text x="105" y="245" font-family="sans-serif" font-size="11" fill="#666" text-anchor="middle" font-weight="bold">Entry Point</text>
+  <text x="285" y="245" font-family="sans-serif" font-size="11" fill="#666" text-anchor="middle" font-weight="bold">Orchestrator</text>
+  <text x="465" y="315" font-family="sans-serif" font-size="11" fill="#666" text-anchor="middle" font-weight="bold">Generation</text>
+  <text x="645" y="245" font-family="sans-serif" font-size="11" fill="#666" text-anchor="middle" font-weight="bold">Output</text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7cb3d9"/>
+    </marker>
+  </defs>
+</svg>
+

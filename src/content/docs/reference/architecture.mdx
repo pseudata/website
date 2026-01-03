@@ -1,0 +1,470 @@
+---
+title: "Architecture"
+description: "Technical deep-dive into Pseudata's core components, code generation pipeline, and design decisions that enable cross-language determinism"
+sidebar:
+  order: 2
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Pseudata Architecture",
+        "description": "Technical deep-dive into Pseudata's core components, code generation pipeline, and design decisions that enable cross-language determinism",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/reference/architecture/"
+        },
+        "keywords": ["architecture", "PCG32", "TypeSpec", "design", "components", "code generation", "fixtures"]
+      }
+---
+
+This page provides a technical explanation of Pseudata's architecture, core components, and design decisions. For a high-level overview, see the [Concept](/reference/concept/) page. For implementation details, see the [Contributing guides](/contributing/).
+
+## System Architecture
+
+Pseudata operates across three distinct phases:
+
+### Build Time (Code Generation)
+
+TypeSpec definitions serve as the single source of truth, feeding multiple code generation pipelines:
+
+![Code Generation Flow](/images/codegen-flow.svg)
+
+1. **TypeSpec Definitions** (`*.tsp` files) define models, primitives, and arrays
+2. **JSON Schema Emitter** generates schemas for model generation
+3. **Custom Emitters** generate language-specific code:
+   - `interface-emitter.js` → Primitives interface
+   - `array-emitter.js` → Array classes
+   - `resource-emitter.js` → Embedded locale data
+4. **Quicktype** transforms JSON Schema into language-specific model classes
+
+### Runtime (Data Generation)
+
+At runtime, components work together to generate deterministic data:
+
+![Runtime Flow](/images/runtime-flow.svg)
+
+The flow shows:
+1. **UserArray** (or AddressArray, etc.) extends **PseudoArray** base class
+2. **PseudoArray.at(index)** creates **Generator** with (worldSeed, typeSeq)
+3. **PseudoArray.at(index)** instantiates **Primitives** with (Generator, index)
+4. **Primitives** uses Generator and accesses Resources to generate field values
+5. **Model** (User, Address, etc.) is composed from primitive values and returned
+
+### Testing (Verification)
+
+Fixture-based tests ensure cross-language consistency:
+
+1. **Generate** fixtures from Go (golden reference)
+2. **Verify** all other languages match exactly
+3. **Detect** subtle bugs that unit tests miss
+
+## Core Components
+
+### Generator (PCG32)
+
+**Purpose**: Deterministic pseudo-random number generation.
+
+**Algorithm**: PCG32 (Permuted Congruential Generator) with 64-bit state.
+
+**Why PCG32?**
+- **Portable**: Simple to implement consistently across languages
+- **Fast**: Linear congruential base with efficient permutation
+- **High-quality**: Passes statistical randomness tests
+- **Deterministic**: Same seed always produces identical sequence
+- **Small state**: 64 bits vs. Mersenne Twister's 2.5KB
+
+**Key Operations**:
+```go
+// Initialize with seed
+state := seed
+
+// Generate next uint32
+state = state * 6364136223846793005 + 1442695040888963407
+xorshifted := uint32(((state >> 18) ^ state) >> 27)
+rot := uint32(state >> 59)
+return (xorshifted >> rot) | (xorshifted << ((-rot) & 31))
+```
+
+The state advances identically in Go, Java, Python, TypeScript (using BigInt), ensuring perfect cross-language reproducibility.
+
+### SeedFrom
+
+**Purpose**: Convert human-readable strings to uint64 seeds.
+
+**Algorithm**: FNV-1a hash with Murmur3 Avalanche finalization.
+
+**Why this combination?**
+- **FNV-1a**: Fast initial hash, simple to implement
+- **Murmur3 Avalanche**: Improves bit distribution, reduces collision clusters
+- **Portable**: Consistent across all languages
+- **No dependencies**: Pure algorithm, no external libraries
+
+**Implementation**:
+```go
+func SeedFrom(s string) uint64 {
+    // FNV-1a hash
+    hash := uint64(14695981039346656037) // FNV offset basis
+    for _, b := range []byte(s) {
+        hash ^= uint64(b)
+        hash *= 1099511628211 // FNV prime
+    }
+    
+    // Murmur3 Avalanche finalization
+    hash ^= hash >> 33
+    hash *= 0xff51afd7ed558ccd
+    hash ^= hash >> 33
+    hash *= 0xc4ceb9fe1a85ec53
+    hash ^= hash >> 33
+    
+    return hash
+}
+```
+
+This allows readable test scenarios: `seed_from("test-scenario-1")` produces the same seed everywhere.
+
+### PseudoID
+
+**Purpose**: Encode seed and index into reversible UUID v8 identifiers.
+
+**Format**: UUID v8 with custom layout
+```
+SSSSSSSS-SSSS-8SSS-vSTT-TTIIIIIIIII
+
+S = WorldSeed bits
+T = TypeSeq bits
+I = Index bits
+v = Variant nibble + Skip bits (reserved)
+8 = Version (UUID v8)
+```
+
+**Why UUID v8?**
+- **Standard**: RFC 9562 allows custom data
+- **Reversible**: Can extract seed and index
+- **Unique**: Seed + index pair ensures uniqueness
+- **Compatible**: Works with existing UUID infrastructure
+
+**Encoding**:
+```go
+func (g *Generator) ID() string {
+    // Extract seed and index bits
+    seedHigh := (g.seed >> 32) & 0xFFFFFFFF
+    seedLow := (g.seed >> 16) & 0xFFFF
+    indexHigh := (g.index >> 48) & 0x0FFF
+    indexLow := g.index & 0xFFFFFFFFFFFF
+    
+    // Format as UUID v8
+    return fmt.Sprintf("%08x-%04x-8%03x-%04x-%012x",
+        seedHigh, seedLow, indexHigh,
+        0x8000 | ((indexLow >> 48) & 0x0FFF),
+        indexLow & 0xFFFFFFFFFFFF)
+}
+```
+
+### PseudoArray
+
+**Purpose**: Virtual arrays with O(1) access and zero memory overhead.
+
+**Concept**: Arrays don't store data; they regenerate it on demand using deterministic seeding.
+
+**How It Works**:
+```go
+type UserArray struct {
+    seed uint64
+}
+
+func (a *UserArray) At(index int64) User {
+    // Create generator with base seed + index
+    gen := NewGenerator(a.seed, uint64(index))
+    primitives := NewPrimitives(gen)
+    
+    // Generate user deterministically
+    return User{
+        ID:    primitives.ID(),
+        Name:  primitives.Name(),
+        Email: primitives.Email(),
+        // ... other fields
+    }
+}
+```
+
+**Benefits**:
+- **Memory efficient**: `User[1_000_000]` uses ~16 bytes
+- **Instant access**: No pre-generation or loading time
+- **Reproducible**: Same index always returns same object
+- **Language agnostic**: Works identically everywhere
+
+**Trade-off**: CPU time for memory. Accessing `user[500]` recalculates it each time. For frequent access, cache the result.
+
+### Resource System
+
+**Purpose**: Provide locale-specific data (names, cities, etc.) for realistic generation.
+
+**Hierarchy**:
+```
+typespec/resources/
+├── global/              # Universal data
+│   └── domains.txt
+├── en/                  # Language-specific
+│   └── words.txt
+├── US/                  # Country-specific
+│   ├── cities.txt
+│   └── states.txt
+└── en_US/               # Locale-specific
+    ├── given_male_names.txt
+    ├── given_female_names.txt
+    ├── family_names.txt
+    └── street_names.txt
+```
+
+**Loading Strategy**:
+- **Build time**: `resource-emitter.js` discovers and embeds resources
+- **Runtime**: SDK provides resources as compiled-in constants/maps
+- **No fallback**: Each locale must have complete resource files
+
+**Access Pattern**:
+```go
+data := p.resources()
+name := data.givenMaleNames[p.generator.Intn(len(data.givenMaleNames))]
+```
+
+Resources are embedded at compile time, ensuring no runtime file I/O and consistent availability across languages. Each locale is self-contained with all required resource files.
+
+## Code Generation Pipeline
+
+### Why Code Generation?
+
+**Single Source of Truth**: TypeSpec definitions prevent drift between languages.
+
+**Consistency**: Generated code follows identical patterns.
+
+**Maintainability**: Changes propagate automatically to all SDKs.
+
+**Type Safety**: Models are strongly typed in each language.
+
+### Pipeline Stages
+
+#### 1. TypeSpec → JSON Schema
+
+Standard TypeSpec compiler generates JSON Schema for models:
+
+```typescript
+@model
+model User {
+  @generator("id") id: string;
+  @generator("name") name: string;
+  @generator("email") email: string;
+}
+```
+
+Output: `User.json` schema for quicktype consumption.
+
+#### 2. Custom Emitters → Interfaces/Arrays
+
+Three custom emitters generate SDK code:
+
+**interface-emitter.js**:
+- Reads `Primitives` interface from TypeSpec
+- Generates language-specific interface declarations
+- Maps TypeSpec types to native types (int64 → long/i64/number)
+
+**array-emitter.js**:
+- Finds models decorated with `@array(typeSequence)`
+- Generates `<Model>Array` classes extending `PseudoArray`
+- Implements `at(index)` using primitives + generators
+
+**resource-emitter.js**:
+- Scans `typespec/resources/` directory
+- Discovers locales automatically (no registration needed)
+- Embeds resource data as language-specific constants
+
+#### 3. Quicktype → Models
+
+[Quicktype](https://quicktype.io/) transforms JSON Schema into idiomatic models:
+- Go: structs with json tags
+- Java: classes with Jackson annotations
+- Python: dataclasses
+- TypeScript: interfaces
+
+**Why quicktype?** TypeSpec supports only a handful of languages natively, while quicktype supports 20+ languages including C#, PHP, Rust, Swift, Dart, and many others. Using JSON Schema as an intermediate format allows Pseudata to leverage quicktype's extensive language support for model generation.
+
+### Build Command
+
+```bash
+make generate
+```
+
+Runs all emitters and code generators, producing:
+```
+sdks/
+├── go/
+│   ├── primitives.go        # generated by interface-emitter
+│   ├── arrays.go             # generated by array-emitter
+│   ├── resources.go          # generated by resource-emitter
+│   └── models.go             # generated by quicktype
+├── python/
+│   └── pseudata/
+│       ├── primitives.py     # generated by interface-emitter
+│       ├── arrays.py         # generated by array-emitter
+│       ├── resources.py      # generated by resource-emitter
+│       └── models.py         # generated by quicktype
+└── ...
+```
+
+## Testing Strategy
+
+### Fixture-Based Testing
+
+**Problem**: How to verify cross-language consistency?
+
+**Solution**: Pre-generated test vectors (fixtures) as single source of truth.
+
+### The Golden Reference Pattern
+
+1. **Implement in Go first** (chosen as reference language)
+2. **Run tests with `-update` flag** to generate fixture JSON
+3. **All other languages** load the same fixtures and verify outputs match
+
+**Example Fixture**:
+```json
+{
+  "tests": [
+    {
+      "seed": "42",
+      "index": 0,
+      "expected": {
+        "id": "0000002a-0000-8000-8000-000000000000",
+        "name": "John Smith",
+        "email": "john.smith@example.com"
+      }
+    }
+  ]
+}
+```
+
+### What Fixtures Catch
+
+Real bugs caught by fixture testing:
+
+1. **RNG State Bugs**: Calling `rng()` multiple times in a loop
+2. **UTF-8 Handling**: Byte slicing corrupting multi-byte characters
+3. **Type Mapping**: Signed vs. unsigned integer handling
+4. **Resource Access**: Wrong locale or missing fallback
+5. **Bitwise Operations**: UUID encoding differences
+
+### Test Organization
+
+```
+fixtures/
+├── pcg32_test_vectors.json       # Generator tests
+├── seedfrom_test_vectors.json    # SeedFrom tests
+├── id_utils_test_vectors.json    # PseudoID tests
+├── primitives_test_vectors.json  # All primitives
+├── array_user_test_vectors.json  # User array
+└── array_address_test_vectors.json
+```
+
+Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide](/contributing/testing/) for implementation details.
+
+## Design Decisions
+
+### PCG32 over Other PRNGs
+
+**Alternatives considered**: Mersenne Twister, xoroshiro128+, SplitMix64, Mulberry32
+
+**Why PCG32?**
+- **Portability**: Simpler to implement correctly across languages than MT19937
+- **Size**: 64-bit state vs. MT's 2.5KB
+- **Quality**: Sufficient for mock data (not cryptographic needs)
+- **Speed**: Faster than MT, comparable to xoroshiro
+- **Better than Mulberry32**: 64-bit state vs. 32-bit, longer period, better statistical properties
+- **Proven**: Widely used, well-tested
+
+### Virtual Arrays over Pre-generation
+
+**Alternatives considered**: Pre-generate and serialize, lazy generation with caching
+
+**Why virtual arrays?**
+- **Memory efficiency**: Testing pagination with millions of items
+- **Instant startup**: No loading or deserialization time
+- **Simplicity**: No cache invalidation logic
+- **Determinism**: Recalculation guarantees consistency
+
+**Trade-off**: CPU time on repeated access. Applications can add their own caching layer if needed.
+
+### Code Generation over Manual Implementation
+
+**Alternatives considered**: Hand-write each SDK, shared C library with bindings, runtime code generation
+
+**Why code generation?**
+- **Single source of truth**: TypeSpec definitions prevent drift between languages
+- **Consistency**: Generated code follows identical patterns and structure
+- **Maintainability**: Changes propagate automatically to all SDKs
+- **Type safety**: Strong typing in each language's native system
+- **No runtime overhead**: Generated code is native, not interpreted
+- **Language idioms**: Each SDK uses language-specific patterns and conventions
+- **Compile-time validation**: Errors caught during build, not at runtime
+
+**Trade-off**: Requires build step, but ensures correctness and eliminates manual synchronization burden across 9+ languages.
+
+### TypeSpec over Other IDLs
+
+**Alternatives considered**: Protocol Buffers, Thrift, OpenAPI, JSON Schema
+
+**Why TypeSpec?**
+- **Designed for code generation**: First-class emitter API
+- **Extensible**: Custom decorators (`@array`, `@generator`)
+- **Modern**: TypeScript-based, active development
+- **JSON Schema output**: Can leverage quicktype
+- **Microsoft backing**: Long-term support expected
+
+### Virtual Arrays over Pre-generation
+
+**Alternatives considered**: Pre-generate and serialize, lazy generation with caching
+
+**Why virtual arrays?**
+- **Memory efficiency**: Testing pagination with millions of items
+- **Instant startup**: No loading or deserialization time
+- **Simplicity**: No cache invalidation logic
+- **Determinism**: Recalculation guarantees consistency
+
+**Trade-off**: CPU time on repeated access. Applications can add their own caching layer if needed.
+
+### Fixtures over Hope
+
+**Alternatives considered**: Property-based testing, manual verification, parallel implementations
+
+**Why fixtures?**
+- **Concrete verification**: Exact expected outputs, not properties
+- **Debugging**: Easy to reproduce failures with specific test cases
+- **Comprehensive**: Cover edge cases explicitly
+- **Fast**: No complex property generation or shrinking
+- **Simple**: JSON files are human-readable
+
+**Process**: Go generates fixtures → All languages verify → Commit fixtures to git
+
+---
+
+## Next Steps
+
+- **Implementation details**: See [Add a New SDK](/contributing/add-new-sdk/)
+- **Testing in depth**: Read the [Testing Guide](/contributing/testing/)
+- **High-level overview**: Back to [Concept](/reference/concept/)
+

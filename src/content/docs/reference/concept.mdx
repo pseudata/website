@@ -129,7 +129,7 @@ Generator(seed: WorldSeed, sequence: TypeSequence).Advance(Index)
 
 1.  **World Seed:** The global 64-bit integer provided by the developer (e.g., `42`).
 2.  **Index:** The position in the array (e.g., `50`).
-3.  **Type Sequence:** A unique constant ID for each data type (e.g., `101` for Users, `105` for Addresses) that serves as the stream identifier to prevent correlation between different arrays. The sequence value is internally transformed to an odd increment (`inc = (seq << 1) | 1`) as required by PCG32's LCG foundation.
+3.  **Type Sequence:** A unique constant ID for each data type (e.g., `101` for Users, `110` for Addresses) that serves as the stream identifier to prevent correlation between different arrays. The sequence value is internally transformed to an odd increment (`inc = (seq << 1) | 1`) as required by PCG32's LCG foundation.
 
 When you call `users.at(50)`, the engine instantiates a PCG32 Generator with `seed = 42` and `sequence = 101` (internally converted to `inc = 203`), then advances it by `50` steps using PCG32's efficient `Advance()` function. This approach uses the mathematical properties of PCG32 to maintain proper stream independence and statistical quality. The generator produces all random values for that specific user object, then is discarded. This ensures User[50] with WorldSeed=42 always generates identical data, regardless of access order or previously generated objects.
 

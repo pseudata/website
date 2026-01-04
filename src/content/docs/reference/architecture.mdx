@@ -223,7 +223,9 @@ typespec/resources/
 ├── global/              # Universal data
 │   └── domains.txt
 ├── en/                  # Language-specific
-│   └── words.txt
+│   ├── words.txt
+│   ├── months.txt
+│   └── weekdays.txt
 ├── US/                  # Country-specific
 │   ├── cities.txt
 │   └── states.txt
@@ -459,12 +461,4 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 - **Simple**: JSON files are human-readable
 
 **Process**: Go generates fixtures → All languages verify → Commit fixtures to git
-
----
-
-## Next Steps
-
-- **Implementation details**: See [Add a New SDK](/contributing/add-new-sdk/)
-- **Testing in depth**: Read the [Testing Guide](/contributing/testing/)
-- **High-level overview**: Back to [Concept](/reference/concept/)
 

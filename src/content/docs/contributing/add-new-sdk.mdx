@@ -47,7 +47,7 @@ Much of the code is generated automatically from TypeSpec definitions. Your main
 3. **TypeSpec Emitters** - Code generation for your language
 4. **PseudoArray** - Virtual array base class
 5. **ID Utils** - UUID encoding/decoding
-6. **Primitives** - ~35 data generation methods
+6. **Primitives** - ~75 data generation methods
 7. **Models** - Auto-generated via quicktype
 
 **Each component has fixture-based tests** to ensure cross-language consistency.
@@ -314,6 +314,8 @@ typespec/resources/
     nouns.txt                 → ["book", "table", ...]
     adjectives.txt
     verbs.txt
+    months.txt                → ["January", "February", "March", ...]
+    weekdays.txt              → ["Monday", "Tuesday", "Wednesday", ...]
   en_US/
     given_male_names.txt      → ["James", "John", "Robert", ...]
     given_female_names.txt    → ["Mary", "Patricia", ...]
@@ -443,7 +445,7 @@ pub static RESOURCES: Lazy<HashMap<&'static str, Resources>> = Lazy::new(|| {
 - **UTF-8 encoding**: Properly escape strings (Arabic, Chinese, etc.)
 - **String ownership**: `.to_string()` for Rust ownership
 - **Lazy initialization**: Use `once_cell::Lazy` for static initialization
-- **Large file**: ~3000 lines, 200KB+, generated from ~50 resource files
+- **Large file**: ~3000 lines, 200KB+, generated from ~250 resource files
 
 **Resource File Resolution**:
 ```javascript
@@ -481,7 +483,7 @@ interface Primitives {
     element(items: string[]): string;
     digit(length: int32): string;
     probability(p: float32): boolean;
-    // ... ~35 methods total
+    // ... ~75 methods total
 }
 ```
 
@@ -604,11 +606,11 @@ model User {
     @generator("profileUrl") profile: string;
     @generator("websiteUrl") website: string;
     @generator("probability", 0.85) email_verified: boolean;
-    @generator("birthdate") birthdate: string;
+    @generator("birthdateStr", 18, 65, Default.RefDate) birthdate: string;
     @generator("zoneinfo") zoneinfo: string;
     @generator("phoneNumber") phone_number: string;
     @generator("probability", 0.75) phone_number_verified: boolean;
-    @generator("updatedAt") updated_at: int32;
+    @generator("dateTimePast", Default.RefDate, Default.Days) updated_at: safeint;
 }
 ```
 
@@ -728,11 +730,11 @@ fn generate_user(world_seed: u64, type_seq: u64, index: i32) -> User {
         profile: p.profile_url(),
         website: p.website_url(),
         email_verified: p.probability(0.85_f32),
-        birthdate: p.birthdate(),
+        birthdate: p.birthdate_str(18, 65, 1735689600),
         zoneinfo: p.zoneinfo(),
         phone_number: p.phone_number(),
         phone_number_verified: p.probability(0.75_f32),
-        updated_at: p.updated_at(),
+        updated_at: p.date_time_past(1735689600, 30),
     }
 }
 
@@ -940,7 +942,7 @@ impl Primitives for PrimitivesImpl {
         AVAILABLE_LOCALES[rng.intn(AVAILABLE_LOCALES.len())]
     }
     
-    // ... ~35 more primitive methods
+    // ... ~75 more primitive methods
 }
 ```
 
@@ -963,7 +965,7 @@ fn digit(&self, length: i32) -> String {
 ```
 
 **Test**: `fixtures/primitives_test_vectors.json`
-- 12 test cases covering all ~35 primitive methods
+- 12 test cases covering all ~75 primitive methods
 - Generated with Go: `go test -run TestPrimitivesWithVectors -update`
 
 **Resource Access**:
@@ -1049,7 +1051,7 @@ pub struct User {
     pub zoneinfo: String,
     pub phone_number: String,
     pub phone_number_verified: bool,
-    pub updated_at: i32,
+    pub updated_at: i64,
 }
 ```
 

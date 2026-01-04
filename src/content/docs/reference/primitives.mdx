@@ -1,0 +1,919 @@
+---
+title: "Primitives"
+description: "Complete reference for all 75 primitive data generation methods in Pseudata"
+order: 4
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Primitives - Pseudata",
+        "description": "Complete reference for all 75 primitive data generation methods in Pseudata",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/reference/primitives/"
+        },
+        "keywords": ["primitives", "API reference", "data generation", "methods", "documentation"]
+      }
+---
+
+Primitives are the fundamental building blocks for generating deterministic pseudo-random data.
+
+Each primitive method provides a specific type of data generation, from simple values like
+random numbers and strings to complex formatted data like email addresses and phone numbers.
+All primitives are:
+
+- **Deterministic**: Given the same seed, they always produce the same output
+- **Cross-language consistent**: Identical results across Go, Java, Python, and TypeScript
+- **Stateless**: Each call is independent and doesn't affect subsequent calls
+- **Lightweight**: Fast O(1) operations suitable for generating large datasets
+
+Primitives are organized into functional categories:
+
+- **Core**: Fundamental identifiers (ID, UUID)
+- **Internet**: Email domains and web-related data
+- **Location**: Geographic and address components
+- **Numeric**: Random numbers, ranges, and probabilities
+- **Person**: Personal information (names, gender, contact details)
+- **Temporal**: Dates, times, and timestamps
+- **Text**: String generation and manipulation
+
+Primitives are typically used in two contexts:
+
+1. **Direct usage**: Call primitive methods directly to generate individual values
+2. **Model generation**: Primitives power the `@generator` decorators in models like User and Address
+
+All temporal primitives use Unix UTC timestamps (int64) for determinism and cross-language
+consistency. String-suffixed methods (e.g., `birthdateStr()`) provide formatted ISO 8601 output.
+
+## Core
+
+### `id(): string`
+
+Generates a deterministic, sortable ID string in UUID v8 format.
+
+This method produces a special UUID that deterministically encodes the worldSeed,
+typeSeq, and index values into the 122 random bits of a UUID v8. The encoded ID
+is sortable (by worldSeed, then typeSeq, then index) and can be decoded back to
+its components using DecodeID/decodeId/decode_id utility functions.
+
+The UUID uses the following bit packing:
+- 64 bits: worldSeed
+- 2 bits: skip (reserved for future layouts, currently always 0)
+- 16 bits: typeSeq
+- 40 bits: index
+
+Format: "xxxxxxxx-xxxx-8xxx-yxxx-xxxxxxxxxxxx" (RFC 9562 UUID v8)
+
+Visual pattern: SSSSSSSS-SSSS-8SSS-vSTT-TTIIIIIIIII
+
+- S = WorldSeed bits
+- T = TypeSeq bits
+- I = Index bits
+- v = Variant nibble + Skip bits (reserved)
+- 8 = Version (UUID v8)
+
+Use cases:
+- Stable, deterministic IDs for generated entities
+- Sortable IDs that group by world, type, and creation order
+- Traceable IDs that encode generation metadata
+
+**Returns:** `string`
+
+---
+
+## Internet
+
+### `emailDomain(): string`
+
+Generates an email domain from locale-specific pool.
+Selected from list of popular/common email domains for the locale.
+Examples: "gmail.com", "outlook.com", "mailinator.com".
+
+**Returns:** `string`
+
+---
+
+## Location
+
+### `city(): string`
+
+Generates a city/locality name.
+Selected based on the locale.
+
+**Returns:** `string`
+
+---
+
+### `compositeAddress(): string`
+
+Generates a formatted multi-line postal address.
+Format respects cultural conventions based on locale (address format templates).
+Combines street address, city, region, postal code, and country.
+Returns properly formatted address with line breaks and punctuation.
+
+**Returns:** `string`
+
+---
+
+### `country(): string`
+
+Generates a country code extracted from the locale.
+Returns the 2-letter country code (e.g., "US", "GB", "JP").
+Extracted from locale format "lang_COUNTRY" (e.g., "en_US" → "US").
+
+**Returns:** `string`
+
+---
+
+### `locale(): string`
+
+Generates a locale string (language-country).
+Selected from pool of supported locale codes.
+
+**Returns:** `string`
+
+---
+
+### `phoneNumber(): string`
+
+Generates a phone number using country-specific patterns.
+Format varies by locale (e.g., "+1 (555) 123-4567" for US).
+Uses Numerify() internally to replace '#' with random digits in locale patterns.
+Selects from multiple available patterns per locale for variety.
+
+**Returns:** `string`
+
+---
+
+### `postalCode(): string`
+
+Generates a postal/zip code.
+Format varies by country.
+
+**Returns:** `string`
+
+---
+
+### `region(): string`
+
+Generates a state/province/region name.
+Format varies by country.
+
+**Returns:** `string`
+
+---
+
+### `streetAddress(): string`
+
+Generates a street address using locale-specific formatting.
+Format respects cultural conventions (e.g., German: street before number, US: number before street).
+Combines random street number (1-9999) with a street name from locale's street list.
+Uses locale's street format template for proper ordering and punctuation.
+
+**Returns:** `string`
+
+---
+
+### `zoneinfo(): string`
+
+Generates a timezone string from IANA Time Zone Database.
+Examples: "America/Los_Angeles", "Europe/Paris", "Asia/Tokyo"
+
+**Returns:** `string`
+
+---
+
+## Numeric
+
+### `floatRange(min: float32, max: float32): float32`
+
+Generates a random float in the range [min, max).
+
+**Parameters:**
+
+- `min`: `float32`
+- `max`: `float32`
+
+**Returns:** `float32`
+
+---
+
+### `intn(n: int32): int32`
+
+Generates a random integer in the range [0, n).
+
+**Parameters:**
+
+- `n`: `int32`
+
+**Returns:** `int32`
+
+---
+
+### `intRange(min: int32, max: int32): int32`
+
+Generates a random integer in the range [min, max).
+
+**Parameters:**
+
+- `min`: `int32`
+- `max`: `int32`
+
+**Returns:** `int32`
+
+---
+
+### `nextBoolean(): boolean`
+
+Generates a random boolean value.
+
+**Returns:** `boolean`
+
+---
+
+### `nextFloat(): float32`
+
+Generates a random float in the range [0.0, 1.0).
+
+**Returns:** `float32`
+
+---
+
+### `nextInt(): int64`
+
+Generates a random 32-bit unsigned integer.
+Returns uint32 value (0 to 4,294,967,295).
+
+**Returns:** `int64`
+
+---
+
+### `probability(p: float32): boolean`
+
+Returns true with the given probability (0.0 to 1.0).
+Example: probability(0.75) returns true 75% of the time.
+
+**Parameters:**
+
+- `p`: `float32`
+
+**Returns:** `boolean`
+
+---
+
+## Person
+
+### `avatarUrl(): string`
+
+Generates a profile picture URL.
+Format: "https://pseudentity.dev/u/{id}/avatar"
+
+**Returns:** `string`
+
+---
+
+### `compositeUserName(): string`
+
+Generates a full name in the format "GivenName [MiddleName] FamilyName".
+Format respects cultural conventions based on locale.
+
+**Returns:** `string`
+
+---
+
+### `email(): string`
+
+Generates an email address from person's name components.
+Format: given.middle.family
+
+**Returns:** `string`
+
+---
+
+### `familyName(): string`
+
+Generates a family name (surname).
+Selected from locale-specific surname pool.
+Names are culturally appropriate for the locale.
+
+**Returns:** `string`
+
+---
+
+### `gender(): string`
+
+Generates a gender value.
+Distribution: 45% male, 45% female, 10% other.
+
+**Returns:** `string`
+
+---
+
+### `genderedGivenName(): string`
+
+Generates a gender-appropriate given name.
+Selected from name pool matching the generated gender (male, female, or other).
+Names are locale-specific and culturally appropriate.
+
+**Returns:** `string`
+
+---
+
+### `middleName(): string`
+
+Generates a middle name with 30% probability.
+Returns empty string 70% of the time to simulate real-world distribution.
+When generated, uses a gender-appropriate given name from the locale's name pool.
+
+**Returns:** `string`
+
+---
+
+### `nickname(): string`
+
+Generates a nickname in "AdjectiveNoun" format (e.g., "HappyCat", "BraveEagle").
+Uses locale-specific adjectives and nouns with TitleCase formatting.
+Combines a random adjective and noun from the locale's word list.
+
+**Returns:** `string`
+
+---
+
+### `profileUrl(): string`
+
+Generates a profile page URL.
+Format: "https://pseudentity.dev/u/{id}"
+
+**Returns:** `string`
+
+---
+
+### `username(): string`
+
+Generates a username from person's name.
+Format: first letter of given name + family name (lowercase).
+Example: "jsmith" from "John Smith".
+Falls back to family name only if given name is empty.
+
+**Returns:** `string`
+
+---
+
+### `websiteUrl(): string`
+
+Generates a website URL.
+Format: "https://pseudentity.dev/w/{id}"
+
+**Returns:** `string`
+
+---
+
+## Temporal
+
+### `amPm(): string`
+
+Generates AM/PM string based on hour (0-23).
+Returns "AM" for hours 0-11 or "PM" for hours 12-23.
+Use with hour12Str() for formatted 12-hour time display.
+
+**Returns:** `string`
+
+---
+
+### `amPmValue(): int32`
+
+Generates AM/PM indicator based on hour (0-23).
+Returns 0 for AM (hours 0-11) or 1 for PM (hours 12-23).
+Use with hour12() for complete 12-hour clock representation.
+
+**Returns:** `int32`
+
+---
+
+### `birthdate(minAge: int32, maxAge: int32, refDate: int64): int64`
+
+Generates a random birthdate timestamp for someone aged between minAge and maxAge at refDate timestamp.
+
+**Parameters:**
+
+- `minAge`: `int32`
+- `maxAge`: `int32`
+- `refDate`: `int64`
+
+**Returns:** `int64`
+
+---
+
+### `birthdateStr(minAge: int32, maxAge: int32, refDate: int64): string`
+
+Generates a random birthdate string (YYYY-MM-DD) for someone aged between minAge and maxAge at refDate timestamp.
+
+**Parameters:**
+
+- `minAge`: `int32`
+- `maxAge`: `int32`
+- `refDate`: `int64`
+
+**Returns:** `string`
+
+---
+
+### `dateBetween(start: int64, end: int64): int64`
+
+Generates a random date timestamp between start and end timestamps.
+
+**Parameters:**
+
+- `start`: `int64`
+- `end`: `int64`
+
+**Returns:** `int64`
+
+---
+
+### `dateBetweenStr(start: int64, end: int64): string`
+
+Generates a random date string (YYYY-MM-DD) between start and end timestamps.
+
+**Parameters:**
+
+- `start`: `int64`
+- `end`: `int64`
+
+**Returns:** `string`
+
+---
+
+### `dateTimeBetween(start: int64, end: int64): int64`
+
+Generates a random datetime timestamp between start and end timestamps.
+
+**Parameters:**
+
+- `start`: `int64`
+- `end`: `int64`
+
+**Returns:** `int64`
+
+---
+
+### `dateTimeBetweenStr(start: int64, end: int64): string`
+
+Generates a random datetime string (ISO 8601) between start and end timestamps.
+
+**Parameters:**
+
+- `start`: `int64`
+- `end`: `int64`
+
+**Returns:** `string`
+
+---
+
+### `dateTimeFuture(refDate: int64, days: int32): int64`
+
+Generates a random datetime timestamp in the future within days from refDate timestamp.
+
+**Parameters:**
+
+- `refDate`: `int64`
+- `days`: `int32`
+
+**Returns:** `int64`
+
+---
+
+### `dateTimeFutureStr(refDate: int64, days: int32): string`
+
+Generates a random datetime string (ISO 8601) in the future within days from refDate timestamp.
+
+**Parameters:**
+
+- `refDate`: `int64`
+- `days`: `int32`
+
+**Returns:** `string`
+
+---
+
+### `dateTimePast(refDate: int64, days: int32): int64`
+
+Generates a random datetime timestamp in the past within days from refDate timestamp.
+
+**Parameters:**
+
+- `refDate`: `int64`
+- `days`: `int32`
+
+**Returns:** `int64`
+
+---
+
+### `dateTimePastStr(refDate: int64, days: int32): string`
+
+Generates a random datetime string (ISO 8601) in the past within days from refDate timestamp.
+
+**Parameters:**
+
+- `refDate`: `int64`
+- `days`: `int32`
+
+**Returns:** `string`
+
+---
+
+### `dateFuture(refDate: int64, days: int32): int64`
+
+Generates a random date timestamp in the future within days from refDate timestamp.
+
+**Parameters:**
+
+- `refDate`: `int64`
+- `days`: `int32`
+
+**Returns:** `int64`
+
+---
+
+### `dateFutureStr(refDate: int64, days: int32): string`
+
+Generates a random date string (YYYY-MM-DD) in the future within days from refDate timestamp.
+
+**Parameters:**
+
+- `refDate`: `int64`
+- `days`: `int32`
+
+**Returns:** `string`
+
+---
+
+### `datePast(refDate: int64, days: int32): int64`
+
+Generates a random date timestamp in the past within days from refDate timestamp.
+
+**Parameters:**
+
+- `refDate`: `int64`
+- `days`: `int32`
+
+**Returns:** `int64`
+
+---
+
+### `datePastStr(refDate: int64, days: int32): string`
+
+Generates a random date string (YYYY-MM-DD) in the past within days from refDate timestamp.
+
+**Parameters:**
+
+- `refDate`: `int64`
+- `days`: `int32`
+
+**Returns:** `string`
+
+---
+
+### `dayOfMonth(): int32`
+
+Generates a random day of month (1-28).
+Range limited to 1-28 to ensure validity across all months (simplified for determinism).
+Avoids date validation complexity by using safe range for all months.
+
+**Returns:** `int32`
+
+---
+
+### `dayOfMonthStr(): string`
+
+Generates a random day of month string (DD, 01-28).
+Zero-padded to 2 digits. Range limited to 1-28 for month compatibility.
+
+**Returns:** `string`
+
+---
+
+### `hour(): int32`
+
+Generates a random hour (0-23).
+
+**Returns:** `int32`
+
+---
+
+### `hour12(): int32`
+
+Generates a random 12-hour format hour (1-12).
+Converts 24-hour format: midnight (0) becomes 12, hours 13-23 become 1-11.
+Suitable for 12-hour clock displays with AM/PM.
+
+**Returns:** `int32`
+
+---
+
+### `hour12Str(): string`
+
+Generates a random 12-hour format hour string (hh, 01-12).
+Zero-padded to 2 digits. Converts from 24-hour format.
+
+**Returns:** `string`
+
+---
+
+### `hourStr(): string`
+
+Generates a random hour string (HH, 00-23).
+
+**Returns:** `string`
+
+---
+
+### `minute(): int32`
+
+Generates a random minute (0-59).
+
+**Returns:** `int32`
+
+---
+
+### `minuteStr(): string`
+
+Generates a random minute string (mm, 00-59).
+
+**Returns:** `string`
+
+---
+
+### `month(): int32`
+
+Generates a random month number (1-12).
+
+**Returns:** `int32`
+
+---
+
+### `monthName(): string`
+
+Generates a localized month name.
+
+**Returns:** `string`
+
+---
+
+### `monthStr(): string`
+
+Generates a random month string (MM, 01-12).
+
+**Returns:** `string`
+
+---
+
+### `second(): int32`
+
+Generates a random second (0-59).
+
+**Returns:** `int32`
+
+---
+
+### `secondStr(): string`
+
+Generates a random second string (ss, 00-59).
+
+**Returns:** `string`
+
+---
+
+### `timeOfDay(): int32`
+
+Generates time of day as seconds since midnight (0-86399).
+Calculated as: hour * 3600 + minute * 60 + second.
+Range: 0 (00:00:00) to 86399 (23:59:59).
+Useful for time-only comparisons without date components.
+
+**Returns:** `int32`
+
+---
+
+### `timeOfDayStr(): string`
+
+Generates time of day as HH:MM:SS string.
+Zero-padded 24-hour format. Examples: "09:30:45", "14:22:03", "23:59:59".
+Combines hour(), minute(), and second() with proper formatting.
+
+**Returns:** `string`
+
+---
+
+### `unixTimestamp(refDate: int64): int64`
+
+Generates a random Unix timestamp within ±1 year of refDate.
+Range: [refDate - 31,536,000, refDate + 31,536,000] seconds.
+Uses fixed year duration (365 days = 31,536,000 seconds) for determinism.
+Suitable for generating timestamps near a reference point.
+
+**Parameters:**
+
+- `refDate`: `int64`
+
+**Returns:** `int64`
+
+---
+
+### `unixTimestampStr(refDate: int64): string`
+
+Generates a random Unix timestamp within ±1 year of refDate as a string.
+Returns the Unix timestamp (seconds since epoch) as a decimal string.
+
+**Parameters:**
+
+- `refDate`: `int64`
+
+**Returns:** `string`
+
+---
+
+### `weekday(): int32`
+
+Generates a random weekday number (1-7, 1=Monday).
+
+**Returns:** `int32`
+
+---
+
+### `weekdayName(): string`
+
+Generates a localized weekday name.
+
+**Returns:** `string`
+
+---
+
+### `weekdayStr(): string`
+
+Generates a random weekday string (1-7).
+
+**Returns:** `string`
+
+---
+
+### `year(min: int32, max: int32): int32`
+
+Generates a random year in the range [min, max].
+
+**Parameters:**
+
+- `min`: `int32`
+- `max`: `int32`
+
+**Returns:** `int32`
+
+---
+
+### `yearStr(min: int32, max: int32): string`
+
+Generates a random year string (YYYY) in the range [min, max].
+
+**Parameters:**
+
+- `min`: `int32`
+- `max`: `int32`
+
+**Returns:** `string`
+
+---
+
+## Text
+
+### `alnum(length: int32): string`
+
+Generates a random alphanumeric string (a-z, A-Z, 0-9).
+Uses character set: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".
+Equal probability for each character in the set.
+Returns empty string if length ≤ 0.
+Example: alnum(12) → "aB3xY9pQ2mN4".
+
+**Parameters:**
+
+- `length`: `int32`
+
+**Returns:** `string`
+
+---
+
+### `bothify(text: string): string`
+
+Replaces '?' with random letters and '#' with random digits.
+Combines lexify() and numerify() behavior in one pass.
+Letters have 50% chance uppercase, 50% lowercase.
+Example: "??-###-??" → "aB-456-Xy".
+
+**Parameters:**
+
+- `text`: `string`
+
+**Returns:** `string`
+
+---
+
+### `digit(length: int32): string`
+
+Generates a string of random digits (0-9).
+Each position is independently random.
+Returns empty string if length ≤ 0.
+Example: digit(6) → "483729".
+
+**Parameters:**
+
+- `length`: `int32`
+
+**Returns:** `string`
+
+---
+
+### `element(items: string[]): string`
+
+Returns a random element from the provided string array.
+Returns empty string if array is empty.
+Useful for selecting from predefined option lists.
+Example: element(["red", "green", "blue"]) → "green".
+
+**Parameters:**
+
+- `items`: `string[]`
+
+**Returns:** `string`
+
+---
+
+### `letter(length: int32): string`
+
+Generates a string of random letters (a-z, A-Z).
+65% chance lowercase, 35% chance uppercase per character.
+Returns empty string if length ≤ 0.
+Example: letter(8) → "aBcDeFgH".
+
+**Parameters:**
+
+- `length`: `int32`
+
+**Returns:** `string`
+
+---
+
+### `lexify(text: string): string`
+
+Replaces all '?' characters with random letters (A-Z or a-z).
+Each '?' has 50% chance of uppercase, 50% lowercase.
+Other characters pass through unchanged.
+Example: "Test-???" → "Test-aBc" or "Test-XyZ".
+
+**Parameters:**
+
+- `text`: `string`
+
+**Returns:** `string`
+
+---
+
+### `numerify(text: string): string`
+
+Replaces all '#' characters with random digits (0-9).
+Other characters pass through unchanged.
+Example: "###-###-####" → "555-123-4567".
+Useful for generating phone numbers, IDs, and formatted codes.
+
+**Parameters:**
+
+- `text`: `string`
+
+**Returns:** `string`
+
+---
+
+### `uuid(): string`
+
+Generates a UUID v4 string.
+
+**Returns:** `string`
+
+---
+

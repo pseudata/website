@@ -115,7 +115,21 @@ This means importing `bundles/us` instead of `bundles/world` actually results in
 
 ## Available Bundles
 
-Bundles are organized into tiers based on geographic, business, and cultural groupings.
+Bundles are organized into **single-country bundles** for targeted use and **regional bundles** for broader coverage.
+
+### Single-Country Bundles
+
+For most applications, use a single-country bundle that matches your target market. These bundles include all locales for that country.
+
+**Examples**:
+- `CA` (Canada): `en_CA`, `fr_CA`
+- `BR` (Brazil): `pt_BR`
+- `JP` (Japan): `ja_JP`
+
+**Why use single-country bundles?**
+- Most intuitive API (import from `bundles/ca` for Canada)
+- Minimal footprint (only the country you need)
+- Clear and predictable naming
 
 ### Geographic Regions
 
@@ -230,6 +244,12 @@ Each locale provides:
 - Use **US** (default) - Minimal footprint, fastest startup
 - Already loaded by default, no configuration needed
 - Best for MVPs, prototypes, and US-only applications
+
+**Need a specific country?**
+- Use **single-country bundles** (e.g., `CA`, `BR`, `JP`)
+- Most intuitive and predictable API
+- Minimal footprint, only includes that country's locales
+- Example: Import from `bundles/ca` to get both English and French Canadian locales
 
 **Expanding to North America?**
 - Use **NA** - Covers US, Canada (English and French), and Mexico

@@ -167,7 +167,7 @@ This means: Given the same seed, PCG32 generates the exact same sequence of numb
 
 By default, Pseudata uses the **US locale** (`en_US`, ~25KB)—140x smaller than Faker.js!
 
-Need global support? Import a different **regional bundle**:
+For other countries, **single-country bundles** are automatically available (e.g., `CA`, `BR`, `JP`). Or use **regional bundles** for broader coverage:
 
 ```go
 import "github.com/pseudata/pseudata/resources/bundles/emea"
@@ -175,7 +175,7 @@ import "github.com/pseudata/pseudata/resources/bundles/emea"
 users := pseudata.NewUserArray(42, pseudata.WithResources(emea.Resources))
 ```
 
-**Available bundles**: US (25KB), NA (100KB), EU (150KB), EMEA (225KB), APAC (150KB), World (500KB)
+**Available bundles**: Individual countries (e.g., CA, BR, JP) or regions (NA, EU, EMEA, APAC, World)
 
 [Learn more about using locales →](/guides/using-locales/)
 

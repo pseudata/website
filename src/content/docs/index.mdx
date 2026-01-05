@@ -247,4 +247,86 @@ By default, only US locale loads. Import regional bundles as you expand.
 
 Modern build tools automatically tree-shake unused bundles. You only ship what you use.
 
+### Using Locales
+
+By default, Pseudata loads only the **US bundle** (`en_US` locale). This means you can start using Pseudata immediately without any configuration:
+
+<Tabs>
+  <TabItem label="Go">
+    ```go
+    import "github.com/pseudata/pseudata"
+
+    users := pseudata.NewUserArray(42)
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    
+    UserArray users = new UserArray(42);
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray
+    
+    users = UserArray(42)
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray } from '@pseudata/core';
+    
+    const users = new UserArray(42n);
+    ```
+  </TabItem>
+</Tabs>
+
+Import a bundle and pass it via options to use locales from that region.
+
+<Tabs>
+  <TabItem label="Go">
+    ```go
+    import (
+        "github.com/pseudata/pseudata"
+        "github.com/pseudata/pseudata/resources/bundles/na"
+    )
+
+    users := pseudata.NewUserArray(42, pseudata.WithResources(na.Resources))
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    import dev.pseudata.resources.bundles.ResourcesNA;
+    
+    UserArray users = new UserArray(42, ResourcesNA.INSTANCE);
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray
+    from pseudata.resources.bundles.na import resources_na
+    
+    users = UserArray(42, resources=resources_na)
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray } from '@pseudata/core';
+    import { ResourcesNA } from '@pseudata/core/resources/bundles/na';
+    
+    const users = new UserArray(42n, { resources: ResourcesNA });
+    ```
+  </TabItem>
+</Tabs>
+
+
+
 [Learn more about locale architecture →](/reference/locales/)

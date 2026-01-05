@@ -1,0 +1,493 @@
+---
+title: "Locales"
+description: "Multi-language and regional support with optimized resource bundles"
+order: 6
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Pseudata supports **17 locales** across multiple languages and regions, providing culturally appropriate names, addresses, and geographic data. By default, Pseudata loads only the **US locale** (`en_US`). For multi-region support, you can import **regional bundles** that group related locales.
+
+> **New to locales?** See the [Using Locales guide](/guides/using-locales/) for a practical introduction.
+
+> **Note**: Current locale counts and resource sizes reflect early development. Production releases will include significantly larger datasets with more comprehensive names, addresses, and cultural data. The compositional architecture ensures this expansion won't proportionally increase bundle sizes.
+
+---
+
+## Quick Start
+
+### Using the Default
+
+By default, Pseudata uses the US bundle—no imports needed:
+
+<Tabs>
+  <TabItem label="Go">
+    ```go
+    import "github.com/pseudata/pseudata"
+    
+    users := pseudata.NewUserArray(worldSeed)  // US bundle (en_US)
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray } from '@pseudata/core';
+    
+    const users = new UserArray(worldSeed);  // US bundle (en_US)
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray
+    
+    users = UserArray(world_seed)  # US bundle (en_US)
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    
+    UserArray users = new UserArray(worldSeed);  // US bundle (en_US)
+    ```
+  </TabItem>
+</Tabs>
+
+### Using a Different Bundle
+
+To use a different bundle, import it and pass via options:
+
+<Tabs>
+  <TabItem label="Go">
+    ```go
+    import (
+        "github.com/pseudata/pseudata"
+        "github.com/pseudata/pseudata/resources/bundles/emea"
+    )
+    
+    users := pseudata.NewUserArray(worldSeed, pseudata.WithResources(emea.Resources))
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray } from '@pseudata/core';
+    import { ResourcesEMEA } from '@pseudata/core/resources/bundles/emea';
+    
+    const users = new UserArray(worldSeed, { resources: ResourcesEMEA });
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray
+    from pseudata.resources.bundles.emea import resources_emea
+    
+    users = UserArray(world_seed, resources=resources_emea)
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    import dev.pseudata.resources.bundles.ResourcesEMEA;
+    
+    UserArray users = new UserArray(worldSeed, ResourcesEMEA.INSTANCE);
+    ```
+  </TabItem>
+</Tabs>
+
+### Why This Matters
+
+**Memory efficiency through selective loading:**
+
+Modern build tools and compilers automatically remove unused code. When you import only the bundle you need, unused bundles won't bloat your output:
+
+- **JavaScript/TypeScript**: Webpack, Rollup, esbuild perform tree-shaking
+- **Go**: Compiler only includes referenced packages in final binary
+- **Python**: Module system loads only imported packages
+- **Java**: JVM only loads referenced classes into memory at runtime
+
+This means importing `bundles/us` instead of `bundles/world` actually results in smaller memory footprint—you only load the locales you use.
+
+---
+
+## Available Bundles
+
+Bundles are organized into tiers based on geographic, business, and cultural groupings.
+
+### Geographic Regions
+
+Natural geographic regions aligned with where your application is deployed or where your users are located.
+
+**US (default)**
+- Locales: `en_US`
+- Minimal starting point, automatically loaded if no bundle specified
+
+**NA (North America)**
+- Locales: `en_US`, `en_CA`, `fr_CA`, `es_MX`
+- Use cases: North American markets, US/Canada applications
+
+**EU (Europe)**
+- Locales: `en_GB`, `de_DE`, `fr_FR`, `hu_HU`, `de_AT`, `de_CH`
+- Use cases: European markets, multi-country EU apps
+
+**APAC (Asia-Pacific)**
+- Locales: `ja_JP`, `zh_CN`, `hi_IN`, `vi_VN`
+- Use cases: Asia-Pacific markets, APAC-focused applications
+
+**MEA (Middle East & Africa)**
+- Locales: `ar_SA`, `tr_TR`
+- Use cases: Middle East and African markets
+
+**SA (South America)**
+- Locales: `pt_BR`
+- Use cases: Brazilian/South American markets
+
+### Business Regions
+
+Enterprise-oriented groupings that match common business organizational structures (regional divisions).
+
+**AMER (Americas)**
+- Locales: `en_US`, `en_CA`, `fr_CA`, `es_MX`, `pt_BR`
+- Combines NA + SA for pan-American operations
+- Use cases: Enterprise Americas division, multi-national American operations
+
+**EMEA (Europe, Middle East & Africa)**
+- Locales: `en_GB`, `de_DE`, `fr_FR`, `hu_HU`, `de_AT`, `de_CH`, `ar_SA`, `tr_TR`
+- Combines EU + MEA for traditional EMEA business regions
+- Use cases: Enterprise EMEA division, global enterprise SaaS
+
+### Cultural Groupings
+
+Language and culture-based groupings that transcend national borders.
+
+**LATAM (Latin America)**
+- Locales: `es_MX`, `pt_BR`
+- Spanish/Portuguese-speaking Americas
+- Use cases: Latin American marketing campaigns, Hispanic/Lusophone content
+
+**DACH (German-speaking)**
+- Locales: `de_DE`, `de_AT`, `de_CH`
+- German-speaking countries (Deutschland, Austria, Confoederatio Helvetica)
+- Use cases: German-language marketing, DACH region targeting
+
+### Complete
+
+**World**
+- Locales: All 17 supported locales
+- Maximum coverage for truly global applications or when locale requirements are unknown
+- Use cases: Global platforms, locale discovery tools, international testing suites
+
+---
+
+## Supported Locales
+
+Pseudata currently supports 17 locales across 12 languages and 16 countries. Each locale includes culturally appropriate data for names, addresses, and geographic information.
+
+### Complete Locale List
+
+| Locale | Language | Country | Included in Bundles |
+|--------|----------|---------|---------------------|
+| `en_US` | English | United States | **US** (default), NA, AMER, World |
+| `en_CA` | English | Canada | NA, AMER, World |
+| `fr_CA` | French | Canada | NA, AMER, LATAM, World |
+| `es_MX` | Spanish | Mexico | NA, AMER, LATAM, World |
+| `pt_BR` | Portuguese | Brazil | SA, AMER, LATAM, World |
+| `en_GB` | English | United Kingdom | EU, EMEA, World |
+| `fr_FR` | French | France | EU, EMEA, World |
+| `de_DE` | German | Germany | EU, EMEA, DACH, World |
+| `de_AT` | German | Austria | EU, EMEA, DACH, World |
+| `de_CH` | German | Switzerland | EU, EMEA, DACH, World |
+| `hu_HU` | Hungarian | Hungary | EU, EMEA, World |
+| `ar_SA` | Arabic | Saudi Arabia | MEA, EMEA, World |
+| `tr_TR` | Turkish | Turkey | MEA, EMEA, World |
+| `ja_JP` | Japanese | Japan | APAC, World |
+| `zh_CN` | Chinese (Simplified) | China | APAC, World |
+| `hi_IN` | Hindi | India | APAC, World |
+| `vi_VN` | Vietnamese | Vietnam | APAC, World |
+
+### Data Included Per Locale
+
+Each locale provides:
+- **Person Names**: Gender-specific first names (male/female/other), family names, and name formatting rules
+- **Geographic Data**: Cities, states/provinces, street names, and postal/zip code patterns
+- **Address Formats**: Country-specific address structure and formatting (via country scope)
+- **Phone Patterns**: National phone number formats (via country scope)
+- **Language Data**: Months, weekdays, and word lists for text generation (via language scope)
+- **Timezones**: Country-specific timezone identifiers (via country scope)
+
+> **Note**: Current datasets contain minimal sample data for early development. Production releases will include significantly more comprehensive name lists, cities, and geographic data per locale.
+
+---
+
+## Choosing a Bundle
+
+### Which bundle should I use?
+
+**Starting a new project?**
+- Use **US** (default) - Minimal footprint, fastest startup
+- Already loaded by default, no configuration needed
+- Best for MVPs, prototypes, and US-only applications
+
+**Expanding to North America?**
+- Use **NA** - Covers US, Canada (English and French), and Mexico
+- Natural fit for applications targeting the North American market
+- Supports English, French, and Spanish language variants
+
+**Building for multiple continents?**
+- Use geographic bundles (**EU**, **APAC**, **MEA**, **SA**) based on your primary market
+- Each bundle optimized for its region's locales
+- Keeps memory footprint smaller than World bundle
+
+**Enterprise with regional divisions?**
+- Use **AMER** or **EMEA** - Matches common enterprise organizational structures
+- **AMER**: Covers entire Americas (North + South)
+- **EMEA**: Covers Europe, Middle East, and Africa
+
+**Targeting cultural/linguistic groups?**
+- Use **LATAM** for Spanish/Portuguese-speaking markets across borders
+- Use **DACH** for German-speaking countries (Germany, Austria, Switzerland)
+
+**Need maximum locale coverage?**
+- Use **World** - All 17 locales
+- Best for truly global platforms or when locale requirements are unknown
+- Useful for comprehensive testing suites
+
+### Multiple bundles?
+
+You can only use one bundle per array instance. Choose the bundle that covers all your target markets.
+
+**Need a custom combination not covered by existing bundles?** Open an issue on GitHub to request new regional groupings. Thanks to Pseudata's compositional architecture, creating new bundles is cheap—they're just lightweight references to existing atomic modules.
+
+---
+
+## How It Works
+
+### What Changes by Locale
+
+When you switch bundles, different primitives generate different data based on the included locales.
+
+**Locale-specific primitives** (vary per locale):
+- **Names**: `genderedGivenName()`, `familyName()`, `middleName()`, `compositeUserName()`, `email()`, `username()`
+  - Example: `en_US` → "John Smith", `ja_JP` → "田中 太郎", `ar_SA` → "محمد العلي"
+- **Geography**: `city()`, `region()`, `postalCode()`, `streetAddress()`, `compositeAddress()`
+  - Example: `en_CA` → "Toronto, Ontario M5V 2H1" vs `fr_CA` → "Montréal, Québec H3B 1A7"
+
+**Language-specific primitives** (vary per language):
+- **Linguistic**: `monthName()`, `weekdayName()`, `nickname()`
+  - Example: `en_*` → "January, Monday" vs `fr_*` → "janvier, lundi"
+
+**Country-specific primitives** (vary per country):
+- **Contact**: `phoneNumber()`, `zoneinfo()`
+  - Example: `*_US` → "+1 (555) 123-4567" vs `*_DE` → "+49 30 12345678"
+
+**Not locale-dependent** (same across all bundles):
+- **Identifiers**: `id()`, `uuid()`, `avatarUrl()`, `profileUrl()`, `websiteUrl()`
+- **Numeric**: `nextInt()`, `nextFloat()`, `nextBoolean()`, `intn()`, `intRange()`, `floatRange()`, `probability()`, `gender()`
+- **Temporal**: All date/time primitives (timestamps, date ranges, etc.)
+- **Text**: `digit()`, `letter()`, `alnum()`, `numerify()`, `lexify()`, `bothify()`, `element()`
+- **Selection**: `country()`, `locale()`, `emailDomain()`
+
+> **Note**: Using the same seed with the same bundle always produces identical data. Switching bundles changes the locale pool, affecting which locale is selected and thus which data is generated.
+
+### Compositional Architecture
+
+Pseudata eliminates duplication through **atomic modules**—actual importable code modules generated from resource files.
+
+**From resource files to source code:**
+
+Resource files (text files like `months.txt`, `cities.txt`) are translated into language-specific source code modules during build:
+
+```
+resources/general/email_domains.txt  →  generated code modules:
+resources/lang/en/months.txt            - general/EmailDomains.go
+resources/country/us/timezones.txt      - lang/en/Months.go
+resources/locale/en_us/cities.txt       - country/us/Timezones.go
+                                        - locale/en_us/Cities.go
+```
+
+**Bundle modules - the user-facing API:**
+
+You don't need to import atomic modules directly. Instead, **bundle modules** are generated that compose the appropriate atomic modules for each region:
+
+```go
+// Bundle module (what you import)
+import "github.com/pseudata/pseudata/resources/bundles/na"
+
+// The bundle is just a shallow reference to atomic modules:
+na.Resources = {
+    EmailDomains: general.EmailDomains,      // from general module
+    Months:       lang_en.Months,            // from lang/en module
+    Timezones:    country_us.Timezones,      // from country/us module
+    Cities:       locale_en_us.Cities,       // from locale/en_us module
+    // ... etc for all 4 NA locales
+}
+```
+
+Bundles don't copy data—they reference data from atomic modules. This means:
+- Each piece of data exists once in memory (in its atomic module)
+- Bundles are lightweight composition layers
+- Compilers/bundlers can eliminate unused atomic modules
+
+**Sharing pattern:**
+
+```
+General Data (email domains)       → Shared by all locales
+├─ Language Data (months, weekdays) → Shared by same language
+├─ Country Data (address formats)   → Shared by same country
+└─ Locale Data (cities, names)      → Locale-specific only
+```
+
+**Example**: Adding `en_AU` (Australian English)
+- ✅ Reuses existing `lang/en` module (months, weekdays already in source code)
+- ✅ Only generates new `locale/en_au` module (AU-specific cities and names)
+- ✅ New bundle just references existing `lang/en` + new `locale/en_au`
+- ❌ **NO duplication** - English language module exists once, referenced by all English locale bundles
+
+**vs. Traditional Libraries**:
+- ❌ Each locale is a full copy in source code
+- ❌ Months and weekdays duplicated in en_US, en_GB, en_CA, en_AU source files
+- ❌ Adding en_AU = generating duplicate English data in source code again
+
+### Why This Architecture is Powerful
+
+**Adding new locales is cheap:**
+- ✅ **Incremental cost**: Only locale-specific data needed
+- ✅ **Zero duplication**: Shared language/country data reused automatically
+- ✅ **Instant composition**: New bundles combine existing atomic modules
+- ✅ **No refactoring**: Existing code continues to work unchanged
+
+**Adding new regions is cheap:**
+- ✅ **Pure composition**: Regional bundles reference existing locale modules
+- ✅ **No data copying**: Bundles are lightweight composition layers
+- ✅ **Custom regions**: Create business-specific groupings (e.g., NORDICS, GCC) effortlessly
+
+**Scaling is sustainable:**
+- ✅ Growing from 17 to 100+ locales won't 100x the codebase
+- ✅ Shared components (languages, countries) amortize across all locales
+- ✅ Tooling (TypeSpec emitters) automates all generation and composition
+
+---
+
+## Design Decisions
+
+This section documents key architectural decisions made during the design of Pseudata's locale system.
+
+### Default Bundle
+
+**Decision**: Default to minimal US bundle
+
+**Why single-country instead of multi-region?**
+
+The default could have been a larger regional bundle like North America, but single-country US provides the smallest practical starting point with minimal memory footprint.
+
+**Why US specifically?**
+- Most common initial market for applications
+- English provides reasonable international fallback
+- Pragmatic default (library originated from US development)
+- Trivially overrideable via options parameter
+
+### Bundle Composition
+
+**Decision**: Generate atomic modules and compose them into regional bundles
+
+**Why not monolithic resources?**
+
+A monolithic approach would generate one large Resources file per locale containing all data (general, language, country, and locale-specific). Regional bundles would then be subsets of these full Resources.
+
+**Problems with monolithic:**
+- Language data duplicated for every locale (months, weekdays, word lists × 17 locales = 17 copies)
+- Adding `en_AU` requires duplicating all English linguistic data even though it's identical to `en_US`, `en_GB`, `en_CA`
+- Scaling to 100+ locales multiplies duplication across dozens of language groups
+- No tree-shaking benefit—bundlers can't eliminate shared data
+
+**Compositional solution:**
+
+Split data into smallest logical units and compose bundles from atomic modules:
+
+```
+general/        → EmailDomains (shared by all)
+lang/en/        → Months, Weekdays, Words (shared by en_US, en_GB, en_CA, en_AU)
+country/us/     → AddressFormat, PhonePatterns (shared by en_US, future es_US)
+locale/en_us/   → Cities, States, Streets, Names (specific to en_US)
+
+Bundle US:      → imports general + lang/en + country/us + locale/en_us
+Bundle NA:      → imports general + 3 languages + 3 countries + 4 locales
+                   (reuses shared components, only pays for differences)
+```
+
+**Benefits:**
+- Language data stored once, shared by all locales using that language
+- Tree-shaking/dead code elimination works automatically
+- Adding locales only requires new data, not copying shared data
+- Clear data provenance (easy to understand where each piece comes from)
+
+### Scope Hierarchy
+
+**Decision**: Use four distinct scopes: General, Language, Country, and Locale
+
+**Rationale**: Data naturally falls into these categories based on sharing patterns:
+- **General**: Truly global data (email domains)
+- **Language**: Linguistic data shared across countries speaking the same language (months, weekdays, word lists)
+- **Country**: Geographic/administrative standards (address formats, phone patterns, timezones)
+- **Locale**: Cultural and regional specificity within a language-country pair (cities, names, streets)
+
+**Why not just two levels (global/locale)?**
+- Would duplicate substantial language data for every locale (en_US, en_GB, en_CA, en_AU all repeating months, weekdays, and thousands of words)
+- Adding a new English locale (en_NZ, en_IE) would require copying identical linguistic data
+- Scaling to 100+ locales would multiply this duplication across dozens of language groups
+
+**Why locale-level (not country-level) for cities/streets/zipcodes?**
+
+The critical insight: **Locale determines which subset of a country's geography to represent.**
+
+Within the same country, different locales need different geographic data:
+- **en_CA** needs pan-Canadian cities (Toronto, Vancouver, Calgary), English street names, nationwide postal codes
+- **fr_CA** needs Quebec-focused cities (Montréal, Québec, Laval), French street names, Quebec postal codes
+- Both use identical address format (country-level) but represent different regions and linguistic traditions
+
+This enables:
+- ✅ **Cultural authenticity**: French Canadian addresses look French Canadian, not just "Canadian"
+- ✅ **Regional realism**: Generated data reflects the cultural/linguistic region, not just the country
+- ✅ **Future expansion**: Can add es_US (Hispanic American cities/streets) vs en_US without conflicts
+
+### Geographic Data Scope
+
+**Decision**: Cities, states, streets, and zipcodes are stored at the locale level, not country level
+
+**Key example - Canada (same country, different locales):**
+
+| Resource | en_CA | fr_CA |
+|----------|-------|-------|
+| **Cities** | Toronto, Vancouver, Calgary (pan-Canadian) | Montréal, Québec, Laval (Quebec-focused) |
+| **Streets** | Yonge Street, King Street, Main Street | Sainte-Catherine, René-Lévesque, Saint-Denis |
+| **Zipcodes** | M5V, V6B, T2P (Toronto, Vancouver, Calgary) | H3B, G1R, J8X (Quebec postal code prefixes) |
+| **State names** | Ontario, Quebec, British Columbia | Québec (Quebec-focused) |
+
+**Why this matters:**
+- An `en_CA` address generates "123 King Street, Toronto, Ontario M5V 2H1"
+- An `fr_CA` address generates "123 Rue Sainte-Catherine, Montréal, Québec H3B 1A7"
+- Both are authentic Canadian addresses, but culturally and regionally distinct
+- Using country-level data would make both look identical, losing cultural authenticity
+
+**Future-proofing:**
+- Enables `es_US` (Los Angeles, Miami, San Antonio with Hispanic street names)
+- Enables `es_ES` vs `es_MX` vs `es_AR` (Madrid vs Mexico City vs Buenos Aires)
+- Enables `en_AU` vs `en_NZ` (Sydney vs Auckland)
+
+### TypeSpec-Driven Generation
+
+**Decision**: Define resource structure in TypeSpec, generate all SDKs from single source
+
+**Benefits:**
+- Single source of truth for resource schema and organization
+- Guaranteed consistency across Go, Java, Python, TypeScript
+- Adding new SDK requires one emitter, not manual data porting
+- Architectural changes (like adding new scope levels) only require emitter updates
+
+**Trade-off:**
+- Build-time tooling complexity (TypeSpec compiler + custom emitters)
+- **Offset by**: Consistency and maintainability gains at 4+ SDKs scale
+

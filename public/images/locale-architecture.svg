@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 600" width="950" height="600" role="img">
+  <title>Locale Architecture Diagram</title>
+  <desc>Four-layer compositional architecture showing module import paths and data composition</desc>
+  
+  <!-- Background -->
+  <rect width="950" height="600" fill="transparent"/>
+  
+  <!-- Layer 1: General (Top) -->
+  <rect x="345" y="65" width="260" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="475" y="95" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">general</text>
+  <text x="475" y="113" font-family="monospace" font-size="11" fill="white" text-anchor="middle">email_domains</text>
+  
+  <!-- Layer 2a: Country (LEFT SIDE) -->
+  <!-- US -->
+  <rect x="50" y="195" width="250" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="175" y="230" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">country/us</text>
+  <text x="175" y="248" font-family="monospace" font-size="11" fill="white" text-anchor="middle">address_format, phone_patterns</text>
+  
+  <!-- Canada -->
+  <rect x="50" y="290" width="250" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="175" y="325" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">country/ca</text>
+  <text x="175" y="343" font-family="monospace" font-size="11" fill="white" text-anchor="middle">address_format, phone_patterns</text>
+  
+  <!-- Layer 2b: Language (RIGHT SIDE) -->
+  <!-- English -->
+  <rect x="650" y="195" width="250" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="775" y="230" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">lang/en</text>
+  <text x="775" y="248" font-family="monospace" font-size="11" fill="white" text-anchor="middle">months, weekdays, adjectives, nouns</text>
+  
+  <!-- French -->
+  <rect x="650" y="290" width="250" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="775" y="325" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">lang/fr</text>
+  <text x="775" y="343" font-family="monospace" font-size="11" fill="white" text-anchor="middle">months, weekdays, adjectives, nouns</text>
+  
+  <!-- Layer 3: Locale -->
+  <!-- en_us (TOP CENTER - aligned with us and en) -->
+  <rect x="345" y="195" width="260" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="475" y="232" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">locale/en_us</text>
+  
+  <!-- en_ca (MIDDLE CENTER LEFT) -->
+  <rect x="150" y="390" width="260" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="280" y="427" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">locale/en_ca</text>
+  
+  <!-- fr_ca (MIDDLE CENTER RIGHT) -->
+  <rect x="540" y="390" width="260" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="670" y="427" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">locale/fr_ca</text>
+  
+  <!-- Layer 4: Bundles (BOTTOM CENTER) -->
+  <rect x="345" y="520" width="260" height="60" rx="6" fill="#4682b4" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="475" y="557" font-family="monospace" font-size="14" fill="white" text-anchor="middle" font-weight="bold">bundles/na</text>
+  
+  <!-- ORANGE lines for en_us (TOP CENTER locale) -->
+  <!-- General → en_us -->
+  <path d="M 475 125 L 475 195" stroke="#FF8C00" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-orange)"/>
+  <!-- Country (us/) → en_us -->
+  <path d="M 300 225 L 345 225" stroke="#FF8C00" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-orange)"/>
+  <!-- Language (en/) → en_us -->
+  <path d="M 650 225 L 605 225" stroke="#FF8C00" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-orange)"/>
+  
+  <!-- CYAN lines for en_ca (MIDDLE CENTER LEFT locale) -->
+  <!-- General → en_ca (top center) -->
+  <path d="M 440 125 L 280 390" stroke="#00CED1" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-cyan)"/>
+  <!-- Country (ca/) → en_ca (top left corner) -->
+  <path d="M 175 350 L 150 390" stroke="#00CED1" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-cyan)"/>
+  <!-- Language (en/) → en_ca (top right corner) -->
+  <path d="M 775 255 L 410 390" stroke="#00CED1" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-cyan)"/>
+  
+  <!-- MAGENTA lines for fr_ca (MIDDLE CENTER RIGHT locale) -->
+  <!-- General → fr_ca (top center) -->
+  <path d="M 510 125 L 670 390" stroke="#FF1493" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-magenta)"/>
+  <!-- Country (ca/) → fr_ca (top left corner) -->
+  <path d="M 175 350 L 540 390" stroke="#FF1493" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-magenta)"/>
+  <!-- Language (fr/) → fr_ca (top right corner) -->
+  <path d="M 775 350 L 800 390" stroke="#FF1493" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-magenta)"/>
+  
+  <!-- Lines from en_us and Canadian locales to bundles/na -->
+  <!-- en_us → bundles/na -->
+  <path d="M 475 255 L 475 520" stroke="#FF8C00" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-orange)"/>
+  <!-- en_ca → bundles/na -->
+  <path d="M 280 450 L 410 520" stroke="#00CED1" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-cyan)"/>
+  <!-- fr_ca → bundles/na -->
+  <path d="M 670 450 L 540 520" stroke="#FF1493" stroke-width="2" fill="none" stroke-dasharray="5,3" opacity="0.8" marker-end="url(#arrow-magenta)"/>
+  
+  <!-- Arrow marker definitions -->
+  <defs>
+    <marker id="arrow-orange" markerWidth="5" markerHeight="5" refX="4.5" refY="2.5" orient="auto">
+      <polygon points="0 0, 5 2.5, 0 5" fill="#FF8C00" opacity="0.8"/>
+    </marker>
+    <marker id="arrow-cyan" markerWidth="5" markerHeight="5" refX="4.5" refY="2.5" orient="auto">
+      <polygon points="0 0, 5 2.5, 0 5" fill="#00CED1" opacity="0.8"/>
+    </marker>
+    <marker id="arrow-magenta" markerWidth="5" markerHeight="5" refX="4.5" refY="2.5" orient="auto">
+      <polygon points="0 0, 5 2.5, 0 5" fill="#FF1493" opacity="0.8"/>
+    </marker>
+  </defs>
+</svg>

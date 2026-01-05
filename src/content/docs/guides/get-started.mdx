@@ -163,6 +163,22 @@ This means: Given the same seed, PCG32 generates the exact same sequence of numb
   </TabItem>
 </Tabs>
 
+## Locale Support
+
+By default, Pseudata uses the **US locale** (`en_US`, ~25KB)—140x smaller than Faker.js!
+
+Need global support? Import a different **regional bundle**:
+
+```go
+import "github.com/pseudata/pseudata/resources/bundles/emea"
+
+users := pseudata.NewUserArray(42, pseudata.WithResources(emea.Resources))
+```
+
+**Available bundles**: US (25KB), NA (100KB), EU (150KB), EMEA (225KB), APAC (150KB), World (500KB)
+
+[Learn more about using locales →](/guides/using-locales/)
+
 ## Key Benefits
 
 - **Cross-Language Consistency** - Same seed = same data across all languages. Test frontend and backend with matching data.

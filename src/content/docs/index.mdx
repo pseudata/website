@@ -50,7 +50,7 @@ head:
         "featureList": [
           "Cross-language consistency",
           "O(1) infinite scale",
-          "Multi-locale support",
+          "Compositional locale architecture",
           "Zero dependencies"
         ],
         "programmingLanguage": ["Go", "Java", "Python", "TypeScript"]
@@ -77,8 +77,8 @@ Pseudata solves this by making mock data generation a standardized algorithm—n
   <Card title="Infinite Scale" icon="rocket">
     O(1) instant access to billions of records. Zero memory overhead—virtual arrays calculate on demand.
   </Card>
-  <Card title="Multi-Locale Support" icon="translate">
-    15+ locales with culturally appropriate names, addresses, and geographic data.
+  <Card title="Smart Locale Loading" icon="translate">
+    Minimal default, scale globally. Compositional architecture with zero duplication—load only what you need.
   </Card>
   <Card title="Zero Dependencies" icon="puzzle">
     Pure implementation in every language. No FFI, no bindings, just native code.
@@ -213,3 +213,38 @@ user = users.at(1_000_000_000)  # Instant
 
   </TabItem>
 </Tabs>
+
+## Built for Global Scale
+
+Traditional faker libraries load all locale data at once or require complex configuration. Pseudata uses a compositional architecture that eliminates duplication and enables precise control.
+
+### Compositional Architecture
+
+The diagram below shows how bundle modules are composed from locale modules, which are themselves composed from atomic modules (general, country, language). Box labels are relative import paths from `@pseudata/core/resources/` (omitted for readability).
+
+Composition uses shallow copies of resource data—no duplication, just references. This makes creating new bundles extremely cheap: adding a region or custom locale combination has minimal overhead.
+
+![Locale Architecture Diagram](/images/locale-architecture.svg)
+
+Data is organized into four intelligent layers:
+
+- **General** - Shared by all locales (email domains)
+- **Language** - Linguistic data (months, weekdays, word lists)
+- **Country** - Geographic standards (address formats, phone patterns)
+- **Locale** - Cultural specificity (cities, names, streets)
+
+**Canadian Example**: Both `en_CA` and `fr_CA` share the same country data (Canadian address formats, phone patterns) but use different language data. English months are defined once in `en/` and reused by both `en_US` and `en_CA`—zero duplication.
+
+### Regional Bundles
+
+Choose bundles that match your needs:
+- **Geographic**: NA, EU, APAC, MEA, SA
+- **Business regions**: AMER, EMEA
+- **Cultural groups**: LATAM, DACH
+- **Complete**: World (all locales)
+
+By default, only US locale loads. Import regional bundles as you expand.
+
+Modern build tools automatically tree-shake unused bundles. You only ship what you use.
+
+[Learn more about locale architecture →](/reference/locales/)

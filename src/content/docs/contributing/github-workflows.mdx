@@ -1,0 +1,557 @@
+---
+title: "GitHub Workflows"
+description: "Understanding and working with Pseudata's CI/CD pipeline including reusable workflows, security practices, and troubleshooting"
+sidebar:
+  order: 7
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "GitHub Workflows - Pseudata CI/CD",
+        "description": "Guide to understanding and working with Pseudata's CI/CD pipeline",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/contributing/github-workflows/"
+        },
+        "keywords": ["GitHub Actions", "CI/CD", "workflows", "automation", "testing"]
+      }
+---
+
+This guide explains Pseudata's CI/CD architecture, how to work with the workflows, and how to troubleshoot issues.
+
+## Architecture Overview
+
+Pseudata uses a **reusable workflow pattern** that provides consistent testing across all language SDKs while minimizing duplication.
+
+### Workflow Structure
+
+```
+ci.yml (Aggregator)
+  ↓ discovers and watches
+  ├─ CI (Go)
+  ├─ CI (Java)
+  ├─ CI (Python)
+  ├─ CI (TypeScript)
+  └─ CI (TypeSpec)
+      ↓ all call
+    reusable-ci.yml
+      ↓ runs
+    task <sdk>:setup
+    task <sdk>:lint
+    task <sdk>:test
+```
+
+### Key Concepts
+
+**1. CI Status Aggregator** (`ci.yml`)
+- Single status check for branch protection
+- Auto-discovers workflows matching `CI (*)`
+- Handles path filter behavior (passes when no workflows run)
+- Fails if any discovered workflow fails
+
+**2. Reusable Workflow** (`reusable-ci.yml`)
+- Shared CI logic for all SDKs
+- Installs Task, sets up language environment
+- Runs `task <sdk>:setup`, `lint`, `test`
+- Cross-platform support (ubuntu, windows, macos)
+
+**3. Language-Specific CIs** (`ci-<lang>.yml`)
+- Triggers reusable workflow for specific SDK
+- Path filtering (only runs when relevant files change)
+- Matrix optimization (ubuntu on PRs, full matrix on push)
+
+**4. Release Automation** (`release.yml`)
+- Uses release-please for version management
+- Publishes to PyPI, NPM, Maven Central
+- Go published via Git tags
+
+## Workflows Reference
+
+### `ci.yml` - Status Aggregator
+
+**Purpose**: Single required status check that aggregates all language CIs
+
+**Triggers**:
+- Pull requests to `main`
+- Pushes to `main`
+
+**How It Works**:
+1. Waits 15 seconds for GitHub to register workflow runs
+2. Uses `gh run list` to discover workflows matching `^CI\\(.+\\)`
+3. Watches each with `gh run watch --exit-status`
+4. Passes if all pass or if none found (path filters)
+5. Fails if any fail
+
+**Branch Protection Setup**:
+Only require "CI" status check - individual language workflows are auto-discovered.
+
+**Example**: Adding a new language
+```yaml
+# Create ci-rust.yml with name: "CI (Rust)"
+# No changes needed to ci.yml - auto-discovered!
+```
+
+### `reusable-ci.yml` - Shared Logic
+
+**Purpose**: DRY - single definition for setup, lint, test across all SDKs
+
+**Inputs**:
+- `sdk`: Language identifier (go, java, python, typescript, typespec)
+- `path`: Directory for caching dependencies
+- `os`: Runner OS (default: ubuntu-latest)
+
+**Steps**:
+1. Checkout code
+2. Install Task (task runner)
+3. Setup language (conditional based on `sdk`)
+4. Run `task <sdk>:setup`
+5. Run `task <sdk>:lint`
+6. Run `task <sdk>:test`
+
+**Language Versions**:
+- Go: 1.25
+- Java: 25 (Temurin)
+- Python: 3.14
+- Node: 24
+
+**Adding a New Language**:
+Add a conditional setup step:
+```yaml
+- name: Setup Rust
+  if: inputs.sdk == 'rust'
+  uses: actions-rust-lang/setup-rust-toolchain@<SHA> # version tag
+  with:
+    toolchain: stable
+    cache: true
+```
+
+### `ci-<language>.yml` - Language CIs
+
+**Purpose**: Trigger reusable workflow for specific SDK with path filtering
+
+**Pattern**:
+```yaml
+name: CI (YourLanguage)  # Must match this pattern!
+on:
+  push:
+    branches: [ "main" ]
+    paths: ['sdks/yourlang/**', 'Taskfile.yml', '.github/workflows/...']
+  pull_request:
+    branches: [ "main" ]
+    paths: ['sdks/yourlang/**', 'Taskfile.yml', '.github/workflows/...']
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        include:
+          - os: ${{ github.event_name == 'push' && 'windows-latest' || '' }}
+          - os: ${{ github.event_name == 'push' && 'macos-latest' || '' }}
+        exclude:
+          - os: ''
+    
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      sdk: yourlang
+      path: sdks/yourlang
+      os: ${{ matrix.os }}
+```
+
+**Path Filters Include**:
+- SDK directory (`sdks/yourlang/**`)
+- Root Taskfile (`Taskfile.yml`)
+- This workflow file
+- Reusable workflow file
+
+**Matrix Strategy**:
+- **Pull Request**: Ubuntu only (fast feedback ~1-2 min)
+- **Push to main**: Ubuntu + Windows + macOS (full coverage ~5-10 min)
+- **Savings**: ~60% CI minutes on PRs
+
+### `release.yml` - Publishing
+
+**Purpose**: Automated version management and package publishing
+
+**Trigger**: Push to `main`
+
+**Flow**:
+1. **release-please** calculates versions, creates/updates PR
+2. When release PR merged: creates Git tag
+3. Publishes packages in parallel:
+   - Python → PyPI (via twine)
+   - TypeScript → NPM (@pseudata/core)
+   - Java → Maven Central (with GPG signing)
+   - Go → via Git tags (no job needed)
+
+**Required Secrets**:
+- `PYPI_TOKEN` - PyPI API token
+- `NPM_TOKEN` - NPM automation token
+- `OSSRH_USERNAME`, `OSSRH_TOKEN` - Maven Central
+- `MAVEN_GPG_PRIVATE_KEY`, `MAVEN_GPG_PASSPHRASE` - Java signing
+
+**Publishing Pattern**:
+```yaml
+publish-<language>:
+  needs: release-please
+  if: ${{ needs.release-please.outputs.releases_created }}
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@<SHA>
+    - name: Install Task
+      uses: arduino/setup-task@<SHA>
+    - name: Setup <Language>
+      uses: actions/setup-<language>@<SHA>
+    - name: Publish
+      env:
+        TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+      run: |
+        task <language>:setup
+        # publish commands
+```
+
+## Security Practices
+
+### 1. SHA Pinning (Required)
+
+**All GitHub Actions MUST be pinned to commit SHAs, not tags.**
+
+❌ **Wrong**:
+```yaml
+uses: actions/checkout@v4
+```
+
+✅ **Correct**:
+```yaml
+uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4.2.2
+```
+
+**Why**: Prevents tag manipulation attacks. Tags are mutable; commit SHAs are immutable.
+
+**How to Find SHAs**:
+1. Go to action's GitHub releases page
+2. Find the tag (e.g., v4.2.2)
+3. Click tag → copy commit SHA
+4. Add version comment for readability
+
+### 2. Minimal Permissions
+
+Use least privilege principle:
+
+```yaml
+permissions:
+  actions: read      # For gh CLI to query workflows
+  contents: read     # For checkout
+
+# Release workflow needs more:
+permissions:
+  contents: write        # Create tags/releases
+  pull-requests: write   # Create release PRs
+```
+
+### 3. Secret Management
+
+**Storing Secrets**:
+- Repository Settings → Secrets and variables → Actions
+- Never commit secrets to code
+- Use environment-specific secrets
+
+**Scoping Secrets**:
+```yaml
+publish-python:
+  env:
+    TWINE_USERNAME: __token__
+    TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}  # Scoped to this job
+```
+
+### 4. Dependency Caching
+
+Language-specific caching improves speed and reduces supply chain attacks:
+
+```yaml
+- name: Setup Python
+  uses: actions/setup-python@<SHA>
+  with:
+    python-version: '3.14'
+    cache: 'pip'
+    cache-dependency-path: 'sdks/python/pyproject.toml'
+```
+
+## Troubleshooting
+
+### CI Failing on One Platform
+
+**Problem**: Tests pass on Ubuntu but fail on Windows/macOS
+
+**Common Causes**:
+1. **Path separators**: Use `path.join()` or `/` (not `\`)
+2. **Line endings**: Configure `.gitattributes` or use `\n`
+3. **Case sensitivity**: Windows/macOS are case-insensitive, Linux is not
+4. **File permissions**: `chmod +x` needed on Linux/macOS
+
+**Debug Steps**:
+```yaml
+# Add to workflow for debugging:
+- name: Debug
+  run: |
+    echo "OS: ${{ runner.os }}"
+    echo "Path: $PATH"
+    ls -la
+```
+
+### Path Filters Not Triggering
+
+**Problem**: Changed files but CI didn't run
+
+**Check Path Patterns**:
+```yaml
+# Workflow must match changed files
+paths: ['sdks/python/**', 'Taskfile.yml']
+
+# TypeSpec changes might need to trigger SDK tests:
+# Consider: typespec/** → regenerates code → affects all SDKs
+```
+
+**Testing Path Filters**:
+1. Create test branch with small change
+2. Check if workflow appears in Actions tab
+3. Adjust paths if needed
+
+### Secrets Not Configured
+
+**Problem**: Publishing job fails with authentication error
+
+**Check Secrets**:
+1. Repository Settings → Secrets and variables → Actions
+2. Verify secret name matches workflow: `PYPI_TOKEN` not `PYPI_API_TOKEN`
+3. Check secret has correct permissions (read/write)
+
+**Test Secrets** (without exposing):
+```yaml
+- name: Check Secret
+  run: |
+    if [ -z "${{ secrets.PYPI_TOKEN }}" ]; then
+      echo "Secret not set!"
+      exit 1
+    fi
+    echo "Secret is configured"
+```
+
+### Aggregator Hanging
+
+**Problem**: CI status check never completes
+
+**Causes**:
+1. **Self-waiting**: Aggregator shouldn't discover itself (fixed with regex)
+2. **Long-running workflow**: Individual CI taking >60 minutes
+3. **Workflow not found**: Name doesn't match `CI (*)`
+
+**Fix**:
+```yaml
+# Ensure name matches pattern:
+name: "CI (YourLanguage)"  # Not "CI-YourLanguage" or "YourLanguage CI"
+```
+
+### Release Not Publishing
+
+**Problem**: Tag created but package not published
+
+**Check**:
+1. **Conditional**: Verify `releases_created` output is true
+2. **Secrets**: Publishing job has required tokens
+3. **Version**: Package version in files matches tag
+4. **Build**: Package builds successfully in CI
+
+**Debug**:
+```yaml
+- name: Debug Release
+  run: |
+    echo "Releases created: ${{ needs.release-please.outputs.releases_created }}"
+    echo "Ref: ${{ github.ref }}"
+```
+
+## Maintenance Tasks
+
+### Updating GitHub Actions
+
+**Frequency**: Monthly or when security advisories published
+
+**Process**:
+1. Check action's releases page for updates
+2. Find new tag → get commit SHA
+3. Update all workflows using that action:
+   ```yaml
+   # Before
+   uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+   
+   # After
+   uses: actions/setup-go@<new-sha> # v6.2.0
+   ```
+4. Test in PR before merging
+
+**Tools**:
+- Dependabot can auto-update (configure `.github/dependabot.yml`)
+- Renovate Bot alternative
+
+### Adding New Platforms
+
+**To test on new OS** (e.g., ubuntu-arm64):
+
+1. **Update matrix** in language CI:
+   ```yaml
+   matrix:
+     os: [ubuntu-latest, ubuntu-arm64]  # Add new platform
+   ```
+
+2. **Test separately first**:
+   ```yaml
+   # Temporary test workflow
+   on:
+     workflow_dispatch:
+   jobs:
+     test-arm:
+       runs-on: ubuntu-arm64
+       steps:
+         - uses: actions/checkout@<SHA>
+         - run: task test
+   ```
+
+3. **Roll out gradually**: Add to one SDK CI, then expand
+
+### Configuring New Secrets
+
+**For new publishing target**:
+
+1. **Generate token** at package registry (e.g., crates.io, rubygems.org)
+2. **Add to GitHub**: Settings → Secrets → New repository secret
+3. **Name convention**: `<REGISTRY>_TOKEN` or `<REGISTRY>_API_KEY`
+4. **Test**: Create dummy release workflow in test repo first
+
+### Testing Workflows
+
+**Local Testing** (limited):
+```bash
+# Install act (GitHub Actions locally)
+brew install act
+
+# Run workflow
+act push
+```
+
+**Branch Testing** (recommended):
+```bash
+# Create test branch
+git checkout -b test/workflow-update
+
+# Modify workflow
+vim .github/workflows/ci-python.yml
+
+# Push and check Actions tab
+git add .github/
+git commit -m "test: update Python CI"
+git push origin test/workflow-update
+```
+
+## Performance Optimization
+
+### CI Minute Usage
+
+**Current Strategy**:
+- PRs: Ubuntu only → ~2 min/SDK → ~10 min total
+- Push: 3 platforms → ~5 min/SDK → ~25 min total
+- Path filters: Skip unchanged SDKs → save ~80%
+
+**Monthly Usage** (example):
+- 100 PRs/month × 10 min = 1,000 minutes
+- 100 pushes × 25 min = 2,500 minutes
+- **Total**: ~3,500 minutes/month (GitHub Free: 2,000 minutes)
+
+### Caching Strategy
+
+**What's Cached**:
+- Go modules (~100 MB)
+- Maven dependencies (~200 MB)
+- Pip packages (~50 MB)
+- NPM packages (~150 MB)
+
+**Cache Hits**: Save 30-60 seconds per run
+
+**Cache Keys**:
+```yaml
+# Go: uses go.sum
+cache: true
+
+# Maven: uses pom.xml
+cache: 'maven'
+cache-dependency-path: 'sdks/java/pom.xml'
+
+# NPM: uses package-lock.json
+cache: 'npm'
+cache-dependency-path: 'sdks/typescript/package-lock.json'
+```
+
+**Cache Miss**: Dependencies changed → new cache created
+
+### Parallel Execution
+
+All language CIs run in parallel:
+- Without: 5 SDKs × 5 min = 25 min sequential
+- With: max(5 min) = 5 min parallel
+- **Savings**: 80%
+
+Release publishing also runs in parallel:
+- Python, TypeScript, Java all publish simultaneously
+
+## Best Practices
+
+### For SDK Maintainers
+
+✅ **Do**:
+- Pin actions to commit SHAs
+- Use path filters to skip unnecessary runs
+- Keep tests fast (under 5 min on Ubuntu)
+- Test workflow changes in PRs
+- Document required secrets
+
+❌ **Don't**:
+- Pin to tags (security risk)
+- Skip tests with `[skip ci]` (breaks consistency)
+- Add heavy dependencies (slows caching)
+- Commit secrets to code
+
+### For Contributors
+
+✅ **Do**:
+- Run `task test` locally before pushing
+- Check CI failures in Actions tab
+- Ask for help in PR comments if CI fails
+- Test on all platforms if possible
+
+❌ **Don't**:
+- Ignore CI failures ("works on my machine")
+- Push repeatedly to trigger CI (run locally first)
+- Modify workflows without understanding impact
+
+## Adding New Language SDK
+
+See [Add New SDK Guide](/contributing/add-new-sdk/#step-7-cicd-integration) for complete instructions.
+

@@ -196,6 +196,7 @@ When prompted, click **"Reopen in Container"** (or use Command Palette: "Dev Con
 The dev container includes everything pre-configured:
 - Go, Java, Python, Node.js with correct versions
 - All build tools and dependencies
+- Task (task runner for build automation)
 
 ### Working in the Container
 
@@ -214,13 +215,13 @@ pseudata/                # Main implementation
 └── fixtures/            # Test vectors
 
 # Run code generation
-make generate
+task generate
 
 # Run tests for each language
-make test
+task test
 
-# See all available make targets
-make
+# See all available tasks
+task --list
 ```
 
 ## Code Standards

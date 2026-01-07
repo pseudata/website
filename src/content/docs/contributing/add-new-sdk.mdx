@@ -1230,21 +1230,376 @@ cargo test
 
 ---
 
+## Step 7: CI/CD Integration
+
+Once your SDK is implemented and tested locally, integrate it into the automated CI/CD pipeline.
+
+:::tip[Detailed Workflow Documentation]
+For comprehensive information about the workflow architecture, troubleshooting, and maintenance, see the [GitHub Workflows](/contributing/github-workflows/) guide.
+:::
+
+### 7.1: Create Taskfile
+
+Add a `Taskfile.yml` in your SDK directory (`sdks/your-language/Taskfile.yml`):
+
+```yaml
+version: "3"
+
+tasks:
+  setup:
+    desc: Install dependencies for your language
+    cmds:
+      - # your dependency installation command
+      # Example: cargo fetch (Rust)
+      # Example: dotnet restore (C#)
+  
+  test:
+    desc: Run tests
+    cmds:
+      - # your test command
+      # Example: cargo test
+      # Example: dotnet test
+  
+  lint:
+    desc: Lint code
+    cmds:
+      - # your linter command
+      # Example: cargo clippy
+      # Example: dotnet format --verify-no-changes
+  
+  format:
+    desc: Format code
+    cmds:
+      - # your formatter command
+      # Example: cargo fmt
+      # Example: dotnet format
+  
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - # your clean command
+      # Example: cargo clean
+      # Example: dotnet clean
+```
+
+### 7.2: Update Root Taskfile
+
+Add your SDK to the root `Taskfile.yml`:
+
+```yaml
+includes:
+  # ... existing includes ...
+  rust:  # your language name
+    taskfile: ./sdks/rust/Taskfile.yml
+    dir: ./sdks/rust
+
+tasks:
+  # Update aggregate commands to include your SDK:
+  setup:
+    desc: Install dependencies for ALL languages
+    deps: [go:setup, python:setup, typescript:setup, java:setup, typespec:setup, rust:setup]
+  
+  test:
+    desc: Run tests for ALL languages
+    deps: [go:test, python:test, typescript:test, java:test, rust:test]
+  
+  lint:
+    desc: Run linters for ALL languages
+    deps: [go:lint, python:lint, typescript:lint, java:lint, rust:lint]
+  
+  format:
+    desc: Format ALL code
+    deps: [go:format, python:format, typescript:format, java:format, typespec:format, rust:format]
+  
+  clean:
+    desc: Clean ALL artifacts
+    deps: [go:clean, python:clean, typescript:clean, java:clean, rust:clean]
+```
+
+### 7.3: Update Reusable CI Workflow
+
+Add your language setup to `.github/workflows/reusable-ci.yml`:
+
+```yaml
+# Add to the steps section:
+- name: Setup Rust
+  if: inputs.sdk == 'rust'
+  uses: actions-rust-lang/setup-rust-toolchain@v1
+  with:
+    toolchain: stable
+    cache: true
+
+# Or for C#:
+- name: Setup .NET
+  if: inputs.sdk == 'csharp'
+  uses: actions/setup-dotnet@v4
+  with:
+    dotnet-version: '9.0'
+    cache: true
+    cache-dependency-path: '${{ inputs.path }}/YourProject.csproj'
+```
+
+**Note**: Use the appropriate GitHub Action for your language and ensure all actions are pinned to commit SHAs (not tags) for security:
+```yaml
+uses: actions-rust-lang/setup-rust-toolchain@1fbea72663f6d4c03efaab13560c8a24cfd2a7cc # v1.0.0
+```
+
+### 7.4: Create CI Workflow
+
+Create `.github/workflows/ci-rust.yml` (or your language):
+
+```yaml
+# CI (Rust) Workflow
+#
+# Triggers the shared CI workflow for the Rust SDK.
+# This workflow ensures that the Rust codebase (located in sdks/rust)
+# passes all standard checks (setup, lint, test) across supported operating systems.
+#
+# Matrix Optimization & Triggers:
+# - on: pull_request: Runs only on [ubuntu-latest] for fast feedback loops.
+# - on: push: Expands matrix to [ubuntu-latest, windows-latest, macos-latest]
+#   to ensure cross-platform compatibility after merging.
+
+name: CI (Rust)
+on:
+  push:
+    branches: [ "main" ]
+    paths: ['sdks/rust/**', 'Taskfile.yml', '.github/workflows/ci-rust.yml', '.github/workflows/reusable-ci.yml']
+  pull_request:
+    branches: [ "main" ]
+    paths: ['sdks/rust/**', 'Taskfile.yml', '.github/workflows/ci-rust.yml', '.github/workflows/reusable-ci.yml']
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        include:
+          - os: ${{ github.event_name == 'push' && 'windows-latest' || '' }}
+          - os: ${{ github.event_name == 'push' && 'macos-latest' || '' }}
+        exclude:
+          - os: ''
+
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      sdk: rust
+      path: sdks/rust
+      os: ${{ matrix.os }}
+```
+
+**Key Points**:
+- **Name Pattern**: Must be `CI (YourLanguage)` - the aggregator discovers workflows matching `^CI\\(.+\\)`
+- **Path Filters**: Include your SDK directory, root Taskfile, and workflow files
+- **Matrix Strategy**: Ubuntu-only on PRs, full matrix on push to main
+- **fail-fast: false**: Tests all platforms even if one fails
+
+### 7.5: Update Release Workflow
+
+Add publishing job to `.github/workflows/release.yml`:
+
+```yaml
+# Add after existing publish jobs:
+
+# ============================================================================
+# JOB 5: PUBLISH RUST (crates.io)
+# ============================================================================
+publish-rust:
+  needs: release-please
+  if: ${{ needs.release-please.outputs.releases_created }}
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    
+    - name: Install Task
+      uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
+      with:
+        version: 3.x
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@1fbea72663f6d4c03efaab13560c8a24cfd2a7cc # v1.0.0
+      with:
+        toolchain: stable
+
+    - name: Publish
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      run: |
+        task rust:setup
+        cd sdks/rust
+        cargo publish
+```
+
+**Publishing Examples by Language**:
+
+<details>
+<summary>C# → NuGet</summary>
+
+```yaml
+publish-csharp:
+  needs: release-please
+  if: ${{ needs.release-please.outputs.releases_created }}
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    
+    - name: Install Task
+      uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
+      with:
+        version: 3.x
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0'
+
+    - name: Publish
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: |
+        task csharp:setup
+        cd sdks/csharp
+        dotnet pack -c Release
+        dotnet nuget push bin/Release/*.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
+```
+
+**Required Secret**: `NUGET_API_KEY`
+</details>
+
+<details>
+<summary>PHP → Packagist</summary>
+
+```yaml
+# PHP uses Composer and Packagist
+# Packagist automatically pulls from GitHub releases
+# No explicit publish job needed - just ensure composer.json has correct version
+
+# Optional: Add webhook trigger in Packagist settings
+```
+
+**Setup**: Configure Packagist webhook for auto-updates
+</details>
+
+<details>
+<summary>Ruby → RubyGems</summary>
+
+```yaml
+publish-ruby:
+  needs: release-please
+  if: ${{ needs.release-please.outputs.releases_created }}
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    
+    - name: Install Task
+      uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
+      with:
+        version: 3.x
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+
+    - name: Publish
+      env:
+        GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+      run: |
+        task ruby:setup
+        cd sdks/ruby
+        gem build pseudata.gemspec
+        gem push pseudata-*.gem
+```
+
+**Required Secret**: `RUBYGEMS_API_KEY`
+</details>
+
+### 7.6: Configure Repository Secrets
+
+Add required secrets in GitHub repository settings (Settings → Secrets and variables → Actions):
+
+**Common Secrets** (already configured):
+- `PYPI_TOKEN` - Python package publishing
+- `NPM_TOKEN` - TypeScript package publishing
+- `OSSRH_USERNAME`, `OSSRH_TOKEN` - Java Maven Central
+- `MAVEN_GPG_PRIVATE_KEY`, `MAVEN_GPG_PASSPHRASE` - Java signing
+
+**Add for Your Language**:
+- Rust: `CARGO_REGISTRY_TOKEN` (from crates.io)
+- C#: `NUGET_API_KEY` (from nuget.org)
+- Ruby: `RUBYGEMS_API_KEY` (from rubygems.org)
+- PHP: No secret needed (Packagist auto-syncs)
+
+### 7.7: Test CI Workflow
+
+1. **Push to feature branch**:
+   ```bash
+   git checkout -b test/add-rust-sdk
+   git add sdks/rust/
+   git commit -m "feat: add Rust SDK"
+   git push origin test/add-rust-sdk
+   ```
+
+2. **Create Pull Request**:
+   - CI should trigger automatically
+   - Check that `CI (Rust)` workflow runs
+   - Verify tests pass on ubuntu-latest
+
+3. **After PR approval, merge to main**:
+   - Full matrix (ubuntu, windows, macos) runs
+   - Verify all platforms pass
+
+4. **Test release workflow** (staging):
+   - Create test release on staging branch
+   - Verify publishing job runs correctly
+   - Check package appears in registry
+
+### 7.8: Documentation Updates
+
+Update these files to include your language:
+
+1. **Root README.md**: Add to language list
+2. **sdks/README.md**: Add SDK table entry
+3. **Website**: Update language support documentation
+4. **Changelog**: Document new SDK in release notes
+
+---
+
 ## Integration Checklist
 
+### Core Implementation
 - [ ] **Generator**: PCG32 implementation with fixture tests
 - [ ] **SeedFrom**: FNV-1a hash with fixture tests
-- [ ] **Resource Emitter**: Embed locale data from `typespec/resources/`
-- [ ] **Interface Emitter**: Generate Primitives interface
-- [ ] **Array Emitter**: Generate array classes + generator functions
-- [ ] **PseudoArray**: Generic virtual array base class
 - [ ] **ID Utils**: Encode/decode with fixture tests
+- [ ] **PseudoArray**: Generic virtual array base class
 - [ ] **Primitives**: Interface + implementation + fixture tests
 - [ ] **Models**: User, Address data structures (auto-generated via quicktype)
 - [ ] **Arrays**: UserArray + AddressArray + fixture tests
+
+### Code Generation
+- [ ] **Resource Emitter**: Embed locale data from `typespec/resources/`
+- [ ] **Interface Emitter**: Generate Primitives interface
+- [ ] **Array Emitter**: Generate array classes + generator functions
+
+### CI/CD Integration
+- [ ] **Taskfile**: Created `sdks/your-language/Taskfile.yml` with setup/test/lint/format/clean tasks
+- [ ] **Root Taskfile**: Updated to include your language in aggregate commands
+- [ ] **Reusable CI**: Added language setup step to `.github/workflows/reusable-ci.yml`
+- [ ] **CI Workflow**: Created `.github/workflows/ci-yourlanguage.yml`
+- [ ] **Release Workflow**: Added publish job to `.github/workflows/release.yml`
+- [ ] **Secrets**: Configured package registry API tokens in GitHub settings
+- [ ] **Testing**: Verified CI runs on PRs and pushes to main
+
+### Package & Documentation
 - [ ] **Package**: Published to language package registry
-- [ ] **Documentation**: README with examples
-- [ ] **CI**: Added to GitHub Actions workflow
+- [ ] **SDK README**: Installation and usage examples
+- [ ] **Main README**: Updated language listing
+- [ ] **sdks/README**: Updated SDK table
+- [ ] **Website Docs**: Updated language support pages
 
 ---
 
@@ -1292,11 +1647,33 @@ Match TypeSpec camelCase: `maleGivenNames` not `male_given_names` in runtime cod
 ## Contributing Your Language
 
 Once implemented and tested:
-1. Create PR with SDK in `sdks/your-language/`
-2. Update main README.md with language listing
-3. Add CI workflow in `.github/workflows/`
-4. Update cross-language compatibility matrix
+
+1. **Create Pull Request** with SDK in `sdks/your-language/`
+2. **Include CI/CD Integration**:
+   - Taskfile with all standard tasks
+   - CI workflow file
+   - Release workflow updates
+   - Updated root Taskfile
+3. **Update Documentation**:
+   - Main README.md with language listing
+   - sdks/README.md with SDK table entry
+   - Cross-language compatibility matrix
+   - Website language support pages
+4. **Test Thoroughly**:
+   - All fixture tests pass locally
+   - CI passes on all platforms (ubuntu, windows, macos)
+   - Release workflow tested on staging branch
+5. **Provide Examples**:
+   - SDK README with installation instructions
+   - Usage examples for all major features
+   - Package registry publication proof
+
+**Review Process**:
+- Maintainers will verify cross-language consistency
+- Check CI/CD integration completeness
+- Review code quality and documentation
+- Test package installation from registry
 
 ---
 
-**Last Updated**: 2025-01-02
+**Last Updated**: 2025-01-07

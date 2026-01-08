@@ -42,6 +42,7 @@ This guide walks through adding support for a new programming language (e.g., Ru
 Much of the code is generated automatically from TypeSpec definitions. Your main task is to write the foundation code (Generator, SeedFrom, ID Utils) and implement the custom TypeSpec emitters to generate code for your target language.
 
 **What You'll Implement**:
+
 1. **Generator** - PCG32 random number generator
 2. **SeedFrom** - String to seed conversion
 3. **TypeSpec Emitters** - Code generation for your language
@@ -59,16 +60,19 @@ Pseudata uses a multi-stage code generation pipeline:
 ![Code Generation Flow](/images/codegen-flow.svg)
 
 ### Stage 1: TypeSpec → JSON Schema
+
 ```bash
 tsp compile src  # Generates JSON Schema in tsp-output/
 ```
 
 **Output**: `tsp-output/@typespec/json-schema/*.json`
+
 - `User.json` - User model schema
 - `Address.json` - Address model schema
 - `Resources.json` - Resources model schema
 
 ### Stage 2: JSON Schema → Models (via quicktype)
+
 ```bash
 quicktype --src-lang schema \
   tsp-output/@typespec/json-schema/*.json \
@@ -81,6 +85,7 @@ quicktype --src-lang schema \
 **Output**: `models.{go,java,py,ts,rs}` - Data structures only
 
 ### Stage 3: TypeSpec → Code (via custom emitters)
+
 ```bash
 # Automatically runs during tsp compile (configured in tspconfig.yaml)
 ```
@@ -102,19 +107,22 @@ quicktype --src-lang schema \
    - Example: `UserArray`, `AddressArray`, `generateUser()`, `generateAddress()`
 
 **Configuration** (`tspconfig.yaml`):
+
 ```yaml
 emit:
-  - "@typespec/json-schema"        # Stage 1: JSON Schema
-  - "../lib/emitter.js"            # Stage 3: Custom emitters
+  - "@typespec/json-schema" # Stage 1: JSON Schema
+  - "../lib/emitter.js" # Stage 3: Custom emitters
 ```
 
 ### Complete Generation Command
+
 ```bash
 cd typespec
 npm run generate
 ```
 
 **This runs**:
+
 1. `tsp compile src` - TypeSpec → JSON Schema + custom emitters
 2. `quicktype` - JSON Schema → Models for all languages
 3. Post-processing (e.g., `fix-resources-visibility.js` for Java)
@@ -179,11 +187,13 @@ Components should be implemented in order, as later components depend on earlier
 
 **What**: Deterministic random number generator using PCG32 algorithm.
 
-**Reference**: 
+**Reference**:
+
 - Go: `generator.go`
 - Specification: `fixtures/pcg32_test_vectors.json`
 
 **Key Methods**:
+
 ```rust
 // Example signatures (adjust to language idioms)
 struct Generator {
@@ -206,25 +216,28 @@ impl Generator {
 ```
 
 **Implementation Requirements**:
+
 - **PCG32 state**: 64-bit state + 64-bit increment (must be odd)
 - **Advance**: Jump to arbitrary position in O(log n) time
 - **Bounded random**: `intn(n)` must use unbiased method (rejection sampling)
 - **UUID v4**: Generate RFC 4122 compliant UUIDs
 
 **Test**: `fixtures/pcg32_test_vectors.json`
+
 - 12 test vectors covering various seeds, sequences, and advance operations
 - Must match exact output sequences across all languages
 
 **Example Test Pattern**:
+
 ```rust
 #[test]
 fn test_generator_with_vectors() {
     let vectors: Vec<TestCase> = load_json("../../fixtures/pcg32_test_vectors.json");
-    
+
     for tc in vectors {
         let mut gen = Generator::new(tc.inputs.seed, tc.inputs.seq);
         gen.advance(tc.inputs.advance);
-        
+
         for (i, expected) in tc.expected.outputs.iter().enumerate() {
             assert_eq!(gen.next_int(), *expected, "Output {} mismatch", i);
         }
@@ -238,16 +251,18 @@ fn test_generator_with_vectors() {
 
 **What**: Deterministic conversion from strings to 64-bit seeds.
 
-**Reference**: 
+**Reference**:
+
 - Go: `seed_from.go`
 - Algorithm: FNV-1a hash
 
 **Key Function**:
+
 ```rust
 fn seed_from(s: &str) -> u64 {
     const OFFSET_BASIS: u64 = 14695981039346656037;
     const FNV_PRIME: u64 = 1099511628211;
-    
+
     let mut hash = OFFSET_BASIS;
     for byte in s.bytes() {
         hash ^= byte as u64;
@@ -258,6 +273,7 @@ fn seed_from(s: &str) -> u64 {
 ```
 
 **Test**: `fixtures/seed_test_vectors.json`
+
 - 18 test cases including empty strings, ASCII, Unicode, long strings
 - Must produce identical seeds across all languages
 
@@ -270,6 +286,7 @@ fn seed_from(s: &str) -> u64 {
 TypeSpec emitters are TypeScript programs that generate code for your language. They read TypeSpec definitions and generate Primitives interfaces, Arrays, and Resources.
 
 **Why Custom Emitters?**
+
 - **Primitives**: Interface only (implementation is hand-written)
 - **Arrays**: Need generator functions with `@generator` decorator logic
 - **Resources**: Embed file data from `typespec/resources/` directory
@@ -280,23 +297,25 @@ TypeSpec emitters are TypeScript programs that generate code for your language. 
 ```javascript
 // typespec/lib/emitter.js - Entry point called by tsp compile
 export async function $onEmit(context) {
-    await emitVirtualArrays(context);    // → Primitives interface + Arrays
-    await emitResourceData(context);     // → Resources
+  await emitVirtualArrays(context); // → Primitives interface + Arrays
+  await emitResourceData(context); // → Resources
 }
 ```
 
 **Location**: `typespec/lib/`
 
 **Three files to modify**:
+
 1. `resource-emitter.js` - Embed locale data
-2. `interface-emitter.js` - Generate Primitives trait/interface  
+2. `interface-emitter.js` - Generate Primitives trait/interface
 3. `array-emitter.js` - Generate array classes + generator functions
 
 **Configuration** (`tspconfig.yaml`):
+
 ```yaml
 emit:
-  - "@typespec/json-schema"        # Built-in: Models → JSON Schema
-  - "../lib/emitter.js"            # Custom: Everything else
+  - "@typespec/json-schema" # Built-in: Models → JSON Schema
+  - "../lib/emitter.js" # Custom: Everything else
 ```
 
 ### 3.1 Resource Emitter
@@ -306,6 +325,7 @@ emit:
 **This generates the largest file** - hundreds of names, cities, etc. per locale
 
 **Input**: Directory structure
+
 ```
 typespec/resources/
   global/
@@ -333,68 +353,70 @@ typespec/resources/
 **Your Task**: Add Rust resource embedding
 
 **Add to `resource-emitter.js`**:
+
 ```javascript
 // 1. Add Rust resource generation
 function emitRustResources(locales, program) {
-    let rustCode = 'use std::collections::HashMap;\n';
-    rustCode += 'use once_cell::sync::Lazy;\n';
-    rustCode += 'use crate::models::Resources;\n\n';
-    
-    // Available locales constant
-    rustCode += 'pub static AVAILABLE_LOCALES: &[&str] = &[\n';
-    rustCode += locales.map(l => `    "${l}"`).join(',\n') + ',\n';
-    rustCode += '];\n\n';
-    
-    // Resources HashMap
-    rustCode += 'pub static RESOURCES: Lazy<HashMap<&\'static str, Resources>> = Lazy::new(|| {\n';
-    rustCode += '    let mut m = HashMap::new();\n\n';
-    
-    for (const locale of locales) {
-        const resources = loadResourcesForLocale(locale);
-        
-        rustCode += `    m.insert("${locale}", Resources {\n`;
-        rustCode += `        email_domains: vec![${formatRustStringArray(resources.emailDomains)}],\n`;
-        rustCode += `        male_given_names: vec![${formatRustStringArray(resources.maleGivenNames)}],\n`;
-        rustCode += `        female_given_names: vec![${formatRustStringArray(resources.femaleGivenNames)}],\n`;
-        rustCode += `        other_given_names: vec![${formatRustStringArray(resources.otherGivenNames)}],\n`;
-        rustCode += `        family_names: vec![${formatRustStringArray(resources.familyNames)}],\n`;
-        rustCode += `        cities: vec![${formatRustStringArray(resources.cities)}],\n`;
-        rustCode += `        streets: vec![${formatRustStringArray(resources.streets)}],\n`;
-        rustCode += `        nouns: vec![${formatRustStringArray(resources.nouns)}],\n`;
-        rustCode += `        adjectives: vec![${formatRustStringArray(resources.adjectives)}],\n`;
-        rustCode += `        verbs: vec![${formatRustStringArray(resources.verbs)}],\n`;
-        rustCode += `        zipcodes: vec![${formatRustStringArray(resources.zipcodes)}],\n`;
-        rustCode += `        states: vec![${formatRustStringArray(resources.states)}],\n`;
-        rustCode += `        address_format: "${resources.addressFormat}".to_string(),\n`;
-        rustCode += `        street_format: "${resources.streetFormat}".to_string(),\n`;
-        rustCode += `        timezones: vec![${formatRustStringArray(resources.timezones)}],\n`;
-        rustCode += `        phone_number_patterns: vec![${formatRustStringArray(resources.phoneNumberPatterns)}],\n`;
-        rustCode += `    });\n\n`;
-    }
-    
-    rustCode += '    m\n';
-    rustCode += '});\n';
-    
-    return rustCode;
+  let rustCode = "use std::collections::HashMap;\n";
+  rustCode += "use once_cell::sync::Lazy;\n";
+  rustCode += "use crate::models::Resources;\n\n";
+
+  // Available locales constant
+  rustCode += "pub static AVAILABLE_LOCALES: &[&str] = &[\n";
+  rustCode += locales.map((l) => `    "${l}"`).join(",\n") + ",\n";
+  rustCode += "];\n\n";
+
+  // Resources HashMap
+  rustCode += "pub static RESOURCES: Lazy<HashMap<&'static str, Resources>> = Lazy::new(|| {\n";
+  rustCode += "    let mut m = HashMap::new();\n\n";
+
+  for (const locale of locales) {
+    const resources = loadResourcesForLocale(locale);
+
+    rustCode += `    m.insert("${locale}", Resources {\n`;
+    rustCode += `        email_domains: vec![${formatRustStringArray(resources.emailDomains)}],\n`;
+    rustCode += `        male_given_names: vec![${formatRustStringArray(resources.maleGivenNames)}],\n`;
+    rustCode += `        female_given_names: vec![${formatRustStringArray(resources.femaleGivenNames)}],\n`;
+    rustCode += `        other_given_names: vec![${formatRustStringArray(resources.otherGivenNames)}],\n`;
+    rustCode += `        family_names: vec![${formatRustStringArray(resources.familyNames)}],\n`;
+    rustCode += `        cities: vec![${formatRustStringArray(resources.cities)}],\n`;
+    rustCode += `        streets: vec![${formatRustStringArray(resources.streets)}],\n`;
+    rustCode += `        nouns: vec![${formatRustStringArray(resources.nouns)}],\n`;
+    rustCode += `        adjectives: vec![${formatRustStringArray(resources.adjectives)}],\n`;
+    rustCode += `        verbs: vec![${formatRustStringArray(resources.verbs)}],\n`;
+    rustCode += `        zipcodes: vec![${formatRustStringArray(resources.zipcodes)}],\n`;
+    rustCode += `        states: vec![${formatRustStringArray(resources.states)}],\n`;
+    rustCode += `        address_format: "${resources.addressFormat}".to_string(),\n`;
+    rustCode += `        street_format: "${resources.streetFormat}".to_string(),\n`;
+    rustCode += `        timezones: vec![${formatRustStringArray(resources.timezones)}],\n`;
+    rustCode += `        phone_number_patterns: vec![${formatRustStringArray(resources.phoneNumberPatterns)}],\n`;
+    rustCode += `    });\n\n`;
+  }
+
+  rustCode += "    m\n";
+  rustCode += "});\n";
+
+  return rustCode;
 }
 
 function formatRustStringArray(arr) {
-    return arr.map(s => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}".to_string()`).join(', ');
+  return arr.map((s) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}".to_string()`).join(", ");
 }
 
 // 2. Register Rust in emitResourceData()
 export async function emitResourceData(context) {
-    const locales = ["ar_SA", "de_DE", "en_CA", "en_GB", "en_US", /* ... */];
-    
-    // Add Rust
-    const rustCode = emitRustResources(locales, program);
-    await program.host.writeFile("sdks/rust/src/resources.rs", rustCode);
-    
-    // ... existing Go, Java, Python, TypeScript
+  const locales = ["ar_SA", "de_DE", "en_CA", "en_GB", "en_US" /* ... */];
+
+  // Add Rust
+  const rustCode = emitRustResources(locales, program);
+  await program.host.writeFile("sdks/rust/src/resources.rs", rustCode);
+
+  // ... existing Go, Java, Python, TypeScript
 }
 ```
 
 **Example Output** (Rust, truncated):
+
 ```rust
 // sdks/rust/src/resources.rs (auto-generated, ~3000 lines)
 use std::collections::HashMap;
@@ -442,29 +464,31 @@ pub static RESOURCES: Lazy<HashMap<&'static str, Resources>> = Lazy::new(|| {
 ```
 
 **Important**:
+
 - **UTF-8 encoding**: Properly escape strings (Arabic, Chinese, etc.)
 - **String ownership**: `.to_string()` for Rust ownership
 - **Lazy initialization**: Use `once_cell::Lazy` for static initialization
 - **Large file**: ~3000 lines, 200KB+, generated from ~250 resource files
 
 **Resource File Resolution**:
+
 ```javascript
 // resource-emitter.js logic
 function getResourceFile(locale, country, language, filename) {
-    // Try locale-specific first: ar_SA/given_male_names.txt
-    if (exists(`resources/${locale}/${filename}`)) return read(locale);
-    
-    // Try language-level: ar/nouns.txt
-    if (exists(`resources/${language}/${filename}`)) return read(language);
-    
-    // Try country-level: SA/timezones.txt  
-    if (exists(`resources/${country}/${filename}`)) return read(country);
-    
-    // Try global: global/email_domains.txt
-    if (exists(`resources/global/${filename}`)) return read(global);
-    
-    // Fallback: empty or error
-    return [];
+  // Try locale-specific first: ar_SA/given_male_names.txt
+  if (exists(`resources/${locale}/${filename}`)) return read(locale);
+
+  // Try language-level: ar/nouns.txt
+  if (exists(`resources/${language}/${filename}`)) return read(language);
+
+  // Try country-level: SA/timezones.txt
+  if (exists(`resources/${country}/${filename}`)) return read(country);
+
+  // Try global: global/email_domains.txt
+  if (exists(`resources/global/${filename}`)) return read(global);
+
+  // Fallback: empty or error
+  return [];
 }
 ```
 
@@ -475,72 +499,70 @@ function getResourceFile(locale, country, language, filename) {
 **Called by**: `array-emitter.js` (automatically)
 
 **Input**: `primitives.tsp` interface
+
 ```typescript
 interface Primitives {
-    id(): string;
-    gender(): string;
-    locale(): string;
-    element(items: string[]): string;
-    digit(length: int32): string;
-    probability(p: float32): boolean;
-    // ... ~75 methods total
+  id(): string;
+  gender(): string;
+  locale(): string;
+  element(items: string[]): string;
+  digit(length: int32): string;
+  probability(p: float32): boolean;
+  // ... ~75 methods total
 }
 ```
 
 **Your Task**: Add Rust type mapping and code generation
 
 **Add to `interface-emitter.js`**:
+
 ```javascript
 // 1. Add Rust type mapping
 function mapRustType(tspType) {
-    if (tspType.endsWith('[]')) {
-        const elementType = tspType.slice(0, -2);
-        return `Vec<${mapRustType(elementType)}>`;
-    }
-    const typeMap = {
-        string: "String",
-        int32: "i32",
-        int64: "i64",
-        uint32: "u32",
-        uint64: "u64",
-        float32: "f32",
-        float64: "f64",
-        boolean: "bool",
-        numeric: "f64",
-    };
-    return typeMap[tspType] || "String";
+  if (tspType.endsWith("[]")) {
+    const elementType = tspType.slice(0, -2);
+    return `Vec<${mapRustType(elementType)}>`;
+  }
+  const typeMap = {
+    string: "String",
+    int32: "i32",
+    int64: "i64",
+    uint32: "u32",
+    uint64: "u64",
+    float32: "f32",
+    float64: "f64",
+    boolean: "bool",
+    numeric: "f64",
+  };
+  return typeMap[tspType] || "String";
 }
 
 // 2. Add Rust interface generation
 function emitRustInterface(interfaceName, methods) {
-    const methodDecls = methods.map(m => {
-        const params = m.parameters
-            .map(p => `${snakeCase(p.name)}: ${mapRustType(p.type)}`)
-            .join(', ');
-        const returnType = mapRustType(m.returnType);
-        return `    fn ${snakeCase(m.name)}(&self${params ? ', ' + params : ''}) -> ${returnType};`;
-    }).join('\n');
-    
-    return `pub trait ${interfaceName} {\n${methodDecls}\n}`;
+  const methodDecls = methods
+    .map((m) => {
+      const params = m.parameters.map((p) => `${snakeCase(p.name)}: ${mapRustType(p.type)}`).join(", ");
+      const returnType = mapRustType(m.returnType);
+      return `    fn ${snakeCase(m.name)}(&self${params ? ", " + params : ""}) -> ${returnType};`;
+    })
+    .join("\n");
+
+  return `pub trait ${interfaceName} {\n${methodDecls}\n}`;
 }
 
 // 3. Register Rust in emitAllInterfaces()
 async function emitAllInterfaces(program, interfaces) {
-    // ... existing Go, Java, Python, TypeScript
-    
-    // Add Rust
-    const rustCode = interfaces.map(i => 
-        emitRustInterface(i.name, i.methods)
-    ).join('\n\n');
-    
-    await program.host.writeFile(
-        "sdks/rust/src/primitives.rs",
-        rustCode
-    );
+  // ... existing Go, Java, Python, TypeScript
+
+  // Add Rust
+  const rustCode = interfaces.map((i) => emitRustInterface(i.name, i.methods)).join("\n\n");
+
+  await program.host.writeFile("sdks/rust/src/primitives.rs", rustCode);
 }
 ```
 
 **Example Output** (Rust):
+
 ```rust
 // sdks/rust/src/primitives.rs (auto-generated)
 pub trait Primitives {
@@ -574,6 +596,7 @@ pub trait Primitives {
 | `boolean` | `bool` | `boolean` | `bool` | `boolean` | `bool` |
 
 **Testing**:
+
 ```bash
 cd typespec
 npm run generate
@@ -587,6 +610,7 @@ npm run generate
 This emitter parses `@generator` decorators and generates field assignment code.
 
 **Input**: TypeSpec model with decorators
+
 ```typescript
 // pseudata.tsp
 @array(101)
@@ -617,81 +641,83 @@ model User {
 **Your Task**: Add Rust array generation
 
 **Add to `array-emitter.js`**:
+
 ```javascript
 // 1. Add Rust argument formatting
 function formatRustArg(arg, paramType) {
-    if (typeof arg === 'string') {
-        return `"${arg.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-    } else if (typeof arg === 'boolean') {
-        return arg ? 'true' : 'false';
-    } else if (typeof arg === 'number') {
-        // Rust: f32 suffix for floats
-        return Number.isInteger(arg) ? arg.toString() : `${arg}_f32`;
-    }
-    return String(arg);
+  if (typeof arg === "string") {
+    return `"${arg.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  } else if (typeof arg === "boolean") {
+    return arg ? "true" : "false";
+  } else if (typeof arg === "number") {
+    // Rust: f32 suffix for floats
+    return Number.isInteger(arg) ? arg.toString() : `${arg}_f32`;
+  }
+  return String(arg);
 }
 
 // 2. Add Rust array class generation
 function emitRustArrays(models, program) {
-    let rustCode = 'use crate::{PseudoArray, PrimitivesImpl, models::*};\n\n';
-    
-    for (const model of models) {
-        const typeSeq = model.decorators.array;
-        const className = `${model.name}Array`;
-        
-        // Array struct
-        rustCode += `pub struct ${className} {\n`;
-        rustCode += `    inner: PseudoArray<${model.name}>,\n`;
-        rustCode += `}\n\n`;
-        
-        // Constructor
-        rustCode += `impl ${className} {\n`;
-        rustCode += `    pub fn new(seed: u64) -> Self {\n`;
-        rustCode += `        Self {\n`;
-        rustCode += `            inner: PseudoArray::new(seed, ${typeSeq}, generate_${snakeCase(model.name)}),\n`;
-        rustCode += `        }\n`;
-        rustCode += `    }\n\n`;
-        rustCode += `    pub fn at(&self, index: i32) -> ${model.name} {\n`;
-        rustCode += `        self.inner.at(index)\n`;
-        rustCode += `    }\n`;
-        rustCode += `}\n\n`;
-        
-        // Generator function
-        rustCode += `fn generate_${snakeCase(model.name)}(world_seed: u64, type_seq: u64, index: i32) -> ${model.name} {\n`;
-        rustCode += `    let p = PrimitivesImpl::new(world_seed, type_seq, index);\n`;
-        rustCode += `    ${model.name} {\n`;
-        
-        for (const field of model.fields) {
-            const gen = field.decorators.generator;
-            if (!gen) continue;
-            
-            const methodName = snakeCase(gen.methodName);
-            const args = gen.args.map(a => formatRustArg(a)).join(', ');
-            const call = args ? `p.${methodName}(${args})` : `p.${methodName}()`;
-            
-            rustCode += `        ${snakeCase(field.name)}: ${call},\n`;
-        }
-        
-        rustCode += `    }\n`;
-        rustCode += `}\n\n`;
+  let rustCode = "use crate::{PseudoArray, PrimitivesImpl, models::*};\n\n";
+
+  for (const model of models) {
+    const typeSeq = model.decorators.array;
+    const className = `${model.name}Array`;
+
+    // Array struct
+    rustCode += `pub struct ${className} {\n`;
+    rustCode += `    inner: PseudoArray<${model.name}>,\n`;
+    rustCode += `}\n\n`;
+
+    // Constructor
+    rustCode += `impl ${className} {\n`;
+    rustCode += `    pub fn new(seed: u64) -> Self {\n`;
+    rustCode += `        Self {\n`;
+    rustCode += `            inner: PseudoArray::new(seed, ${typeSeq}, generate_${snakeCase(model.name)}),\n`;
+    rustCode += `        }\n`;
+    rustCode += `    }\n\n`;
+    rustCode += `    pub fn at(&self, index: i32) -> ${model.name} {\n`;
+    rustCode += `        self.inner.at(index)\n`;
+    rustCode += `    }\n`;
+    rustCode += `}\n\n`;
+
+    // Generator function
+    rustCode += `fn generate_${snakeCase(model.name)}(world_seed: u64, type_seq: u64, index: i32) -> ${model.name} {\n`;
+    rustCode += `    let p = PrimitivesImpl::new(world_seed, type_seq, index);\n`;
+    rustCode += `    ${model.name} {\n`;
+
+    for (const field of model.fields) {
+      const gen = field.decorators.generator;
+      if (!gen) continue;
+
+      const methodName = snakeCase(gen.methodName);
+      const args = gen.args.map((a) => formatRustArg(a)).join(", ");
+      const call = args ? `p.${methodName}(${args})` : `p.${methodName}()`;
+
+      rustCode += `        ${snakeCase(field.name)}: ${call},\n`;
     }
-    
-    return rustCode;
+
+    rustCode += `    }\n`;
+    rustCode += `}\n\n`;
+  }
+
+  return rustCode;
 }
 
 // 3. Register Rust in main emit function
 export async function $onEmit(context) {
-    // ... parse models with @array decorator
-    
-    // Add Rust generation
-    const rustCode = emitRustArrays(arrayModels, program);
-    await program.host.writeFile("sdks/rust/src/arrays.rs", rustCode);
-    
-    // ... existing Go, Java, Python, TypeScript
+  // ... parse models with @array decorator
+
+  // Add Rust generation
+  const rustCode = emitRustArrays(arrayModels, program);
+  await program.host.writeFile("sdks/rust/src/arrays.rs", rustCode);
+
+  // ... existing Go, Java, Python, TypeScript
 }
 ```
 
 **Example Output** (Rust):
+
 ```rust
 // sdks/rust/src/arrays.rs (auto-generated)
 use crate::{PseudoArray, PrimitivesImpl, models::*};
@@ -706,7 +732,7 @@ impl UserArray {
             inner: PseudoArray::new(seed, 101, generate_user),
         }
     }
-    
+
     pub fn at(&self, index: i32) -> User {
         self.inner.at(index)
     }
@@ -748,7 +774,7 @@ impl AddressArray {
             inner: PseudoArray::new(seed, 110, generate_address),
         }
     }
-    
+
     pub fn at(&self, index: i32) -> Address {
         self.inner.at(index)
     }
@@ -770,6 +796,7 @@ fn generate_address(world_seed: u64, type_seq: u64, index: i32) -> Address {
 ```
 
 **Key Points**:
+
 - **Float literals**: Rust needs `_f32` suffix (Java needs `f`, Python/TS don't)
 - **Snake case**: Convert TypeSpec camelCase to Rust snake_case
 - **Type mapping**: Use your `mapRustType()` function
@@ -795,6 +822,7 @@ cargo check
 ```
 
 **Common Issues**:
+
 - **Missing type mapping**: Add to `mapRustType()`
 - **Float literal format**: Check `formatRustArg()`
 - **String escaping**: Handle quotes and backslashes
@@ -806,13 +834,15 @@ cargo check
 
 **What**: Generic virtual array that generates elements on-demand via a generator function.
 
-**Reference**: 
+**Reference**:
+
 - Go: `pseudo_array.go`
 - TypeScript: `sdks/typescript/src/pseudo-array.ts`
 
 **Core Concept**: O(1) random access without storing elements.
 
 **Example Implementation** (Rust):
+
 ```rust
 pub struct PseudoArray<T> {
     world_seed: u64,
@@ -828,7 +858,7 @@ impl<T> PseudoArray<T> {
             generator_fn,
         }
     }
-    
+
     pub fn at(&self, index: i32) -> T {
         (self.generator_fn)(self.world_seed, self.type_seq, index)
     }
@@ -836,6 +866,7 @@ impl<T> PseudoArray<T> {
 ```
 
 **Used by generated arrays**:
+
 ```rust
 // Generated by array-emitter.js
 pub struct UserArray {
@@ -848,7 +879,7 @@ impl UserArray {
             inner: PseudoArray::new(seed, 101, generate_user),
         }
     }
-    
+
     pub fn at(&self, index: i32) -> User {
         self.inner.at(index)
     }
@@ -864,10 +895,12 @@ impl UserArray {
 **What**: Encode/decode deterministic UUIDs (UUID v8) with embedded metadata.
 
 **Reference**:
+
 - Go: `id_utils.go`
 - Documentation: [PseudoID](/reference/pseudoid/)
 
 **Bit Layout** (128-bit UUID v8):
+
 ```
 Bits  63..........................0    15..............0  1 0  15..........0  43..................0
       worldSeed[63:0]                  typeSeq[15:0]     skip  index[43:0]
@@ -878,6 +911,7 @@ skip = 2 reserved bits (must be 0)
 ```
 
 **Detailed Format**:
+
 ```
 UUID v8 Format:
 SSSSSSSS-SSSS-8SSS-vvTT-IIIIIIIIII
@@ -894,6 +928,7 @@ worldSeed[63:32]  worldSeed[31:16]  8 + worldSeed[15:3]  variant + skip + typeSe
 ```
 
 **Functions to implement**:
+
 ```rust
 fn encode_id(world_seed: u64, type_seq: u16, index: u64) -> String;
 fn decode_id(uuid: &str) -> Option<(u64, u16, u64)>; // (worldSeed, typeSeq, index)
@@ -902,6 +937,7 @@ fn decode_id(uuid: &str) -> Option<(u64, u16, u64)>; // (worldSeed, typeSeq, ind
 **Validation**: Decode must fail if skip bits != 0 (forward compatibility).
 
 **Test**: `fixtures/id_test_vectors.json`
+
 - 13 test vectors covering edge cases, bit boundaries, validation
 - Test vector #13 has `should_decode: false` (invalid skip bits)
 
@@ -912,15 +948,18 @@ fn decode_id(uuid: &str) -> Option<(u64, u16, u64)>; // (worldSeed, typeSeq, ind
 **What**: Data generation methods using Generator and Resources.
 
 **Files**:
+
 - **Interface** (generated): `primitives.rs` from TypeSpec
 - **Implementation**: `primitives_impl.rs` (hand-written)
 - **Resources**: `resources.rs` (generated from `typespec/resources/`)
 
 **Reference**:
+
 - Go: `primitives_impl.go`
 - TypeSpec: `typespec/src/primitives.tsp`
 
 **Structure**:
+
 ```rust
 struct PrimitivesImpl {
     world_seed: u64,
@@ -932,21 +971,22 @@ impl Primitives for PrimitivesImpl {
     fn rng(&self) -> Generator {
         Generator::new(self.world_seed, self.type_seq).advance(self.index)
     }
-    
+
     fn id(&self) -> String {
         encode_id(self.world_seed, self.type_seq as u16, self.index as u64)
     }
-    
+
     fn locale(&self) -> String {
         let rng = self.rng();
         AVAILABLE_LOCALES[rng.intn(AVAILABLE_LOCALES.len())]
     }
-    
+
     // ... ~75 more primitive methods
 }
 ```
 
-**Critical Pattern**: 
+**Critical Pattern**:
+
 - **Store `rng()` in local variable** if used more than once in a function
 - Each `rng()` call creates a new generator at the same position
 - Multiple calls without storing = same value repeated!
@@ -965,10 +1005,12 @@ fn digit(&self, length: i32) -> String {
 ```
 
 **Test**: `fixtures/primitives_test_vectors.json`
+
 - 12 test cases covering all ~75 primitive methods
 - Generated with Go: `go test -run TestPrimitivesWithVectors -update`
 
 **Resource Access**:
+
 - Resources are locale-dependent (e.g., `RESOURCES["en_US"]`)
 - Field naming: TypeSpec uses `camelCase`, adjust for language conventions
 - Python uses dict access: `resources["maleGivenNames"]`
@@ -981,10 +1023,12 @@ fn digit(&self, length: i32) -> String {
 **What**: Data structures generated from TypeSpec models via quicktype.
 
 **Reference**:
+
 - TypeSpec: `typespec/src/pseudata.tsp`
 - Generation: `typespec/package.json` scripts
 
 **Generation Flow**:
+
 ```bash
 # 1. TypeSpec compiles to JSON Schema
 tsp compile src
@@ -1000,11 +1044,12 @@ quicktype --src-lang schema \
 ```
 
 **Quicktype Options by Language**:
+
 ```bash
 # Go
 quicktype --lang go --package pseudata --just-types-and-package
 
-# Java  
+# Java
 quicktype --lang java --package dev.pseudata --just-types
 
 # Python
@@ -1018,17 +1063,20 @@ quicktype --lang rust --visibility public --derive-debug
 ```
 
 **What quicktype generates**:
+
 - Data structures (User, Address, Resources)
 - JSON serialization/deserialization
 - Type annotations
 
 **What quicktype does NOT generate**:
+
 - Primitives interface (custom emitter)
 - Array implementations (custom emitter)
 - Resource data (custom emitter)
 - Generator functions (custom emitter)
 
 **Example Output**:
+
 ```rust
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
@@ -1061,16 +1109,19 @@ pub struct User {
 
 **What**: End-to-end verification using fixture-based testing.
 
-**Test**: 
+**Test**:
+
 - `fixtures/array_user_test_vectors.json`
 - `fixtures/array_address_test_vectors.json`
 
 **TypeSeq Values**:
+
 - `101` - UserArray
 - `110` - AddressArray
 - Custom arrays start from `1024`
 
 **Array Test Pattern**:
+
 ```rust
 // Generated from TypeSpec @array decorator
 struct UserArray {
@@ -1083,7 +1134,7 @@ impl UserArray {
             inner: PseudoArray::new(seed, 101, generate_user),
         }
     }
-    
+
     fn at(&self, index: i32) -> User {
         self.inner.at(index)
     }
@@ -1110,11 +1161,13 @@ fn generate_user(world_seed: u64, type_seq: u64, index: i32) -> User {
 Pseudata's core value proposition is **deterministic cross-language consistency**: the same seed must produce identical data in every language. Fixture-based testing is the only way to guarantee this.
 
 Without fixtures, you could have:
+
 - Go generating `"John Smith"` for seed 42
 - Java generating `"John Smyth"` due to a resource loading bug
 - Each language passing its own tests, but cross-language compatibility broken
 
 Fixtures provide a **single source of truth** that all languages must match exactly. This catches:
+
 - RNG state bugs (calling `rng()` multiple times incorrectly)
 - UTF-8 handling issues (byte vs. rune slicing)
 - Type mapping errors (signed vs. unsigned integers)
@@ -1124,11 +1177,13 @@ Fixtures provide a **single source of truth** that all languages must match exac
 ### Golden Test Pattern
 
 All tests follow the same pattern:
+
 1. Go generates fixtures with `-update` flag
 2. All languages read and validate against fixtures
 3. Fixtures are committed to the repository
 
 **Test Execution**:
+
 ```bash
 # Generate fixtures (from Go)
 cd /path/to/pseudata
@@ -1161,9 +1216,9 @@ struct TestCase {
 fn test_component_with_vectors() {
     let fixture = fs::read_to_string("../../fixtures/component_test_vectors.json")
         .expect("Run: cd ../../ && go test -update");
-    
+
     let test_cases: Vec<TestCase> = serde_json::from_str(&fixture).unwrap();
-    
+
     for tc in test_cases {
         // ... run test
         assert_eq!(actual, tc.expected.value, "{} failed", tc.description);
@@ -1176,6 +1231,7 @@ fn test_component_with_vectors() {
 ## Package Management
 
 **Create package.json / Cargo.toml / setup.py**:
+
 ```toml
 # Cargo.toml example
 [package]
@@ -1204,12 +1260,14 @@ uuid = "1.0"
 Deterministic mock data generation for testing.
 
 ## Installation
+
 ```toml
 [dependencies]
 pseudata = "0.0.1"
 ```
 
 ## Quick Start
+
 ```rust
 use pseudata::{Generator, UserArray, seed_from};
 
@@ -1223,6 +1281,7 @@ println!("Name: {}", user.name);
 ```
 
 ## Running Tests
+
 ```bash
 cargo test
 ```
@@ -1249,35 +1308,35 @@ tasks:
   setup:
     desc: Install dependencies for your language
     cmds:
-      - # your dependency installation command
+      -  # your dependency installation command
       # Example: cargo fetch (Rust)
       # Example: dotnet restore (C#)
-  
+
   test:
     desc: Run tests
     cmds:
-      - # your test command
+      -  # your test command
       # Example: cargo test
       # Example: dotnet test
-  
+
   lint:
     desc: Lint code
     cmds:
-      - # your linter command
+      -  # your linter command
       # Example: cargo clippy
       # Example: dotnet format --verify-no-changes
-  
+
   format:
     desc: Format code
     cmds:
-      - # your formatter command
+      -  # your formatter command
       # Example: cargo fmt
       # Example: dotnet format
-  
+
   clean:
     desc: Clean build artifacts
     cmds:
-      - # your clean command
+      -  # your clean command
       # Example: cargo clean
       # Example: dotnet clean
 ```
@@ -1289,7 +1348,7 @@ Add your SDK to the root `Taskfile.yml`:
 ```yaml
 includes:
   # ... existing includes ...
-  rust:  # your language name
+  rust: # your language name
     taskfile: ./sdks/rust/Taskfile.yml
     dir: ./sdks/rust
 
@@ -1298,53 +1357,98 @@ tasks:
   setup:
     desc: Install dependencies for ALL languages
     deps: [go:setup, python:setup, typescript:setup, java:setup, typespec:setup, rust:setup]
-  
+
   test:
     desc: Run tests for ALL languages
     deps: [go:test, python:test, typescript:test, java:test, rust:test]
-  
+
   lint:
     desc: Run linters for ALL languages
     deps: [go:lint, python:lint, typescript:lint, java:lint, rust:lint]
-  
+
   format:
     desc: Format ALL code
     deps: [go:format, python:format, typescript:format, java:format, typespec:format, rust:format]
-  
+
   clean:
     desc: Clean ALL artifacts
     deps: [go:clean, python:clean, typescript:clean, java:clean, rust:clean]
 ```
 
-### 7.3: Update Reusable CI Workflow
+### 7.3: Update Setup Environment Action
 
-Add your language setup to `.github/workflows/reusable-ci.yml`:
+The `setup-env` composite action (`.github/actions/setup-env/action.yml`) centralizes all toolchain setup. Add your language here:
 
 ```yaml
-# Add to the steps section:
-- name: Setup Rust
-  if: inputs.sdk == 'rust'
-  uses: actions-rust-lang/setup-rust-toolchain@v1
-  with:
-    toolchain: stable
-    cache: true
+# Add input parameter (after existing setup-node)
+inputs:
+  setup-rust:
+    description: "Setup Rust toolchain (only used when all=false)"
+    required: false
+    default: "false"
 
-# Or for C#:
-- name: Setup .NET
-  if: inputs.sdk == 'csharp'
-  uses: actions/setup-dotnet@v4
-  with:
-    dotnet-version: '9.0'
-    cache: true
-    cache-dependency-path: '${{ inputs.path }}/YourProject.csproj'
+# Add setup step
+runs:
+  using: "composite"
+  steps:
+    # ... existing steps ...
+
+    - name: Setup Rust
+      if: inputs.all == 'true' || inputs.setup-rust == 'true'
+      uses: actions-rust-lang/setup-rust-toolchain@1fbea72663f6d4c03efaab13560c8a24cfd2a7cc # v1.0.0
+      shell: bash
+      with:
+        toolchain: stable
+        cache: true
+
+    # For C#:
+    - name: Setup .NET
+      if: inputs.all == 'true' || inputs.setup-dotnet == 'true'
+      uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
+      shell: bash
+      with:
+        dotnet-version: "9.0"
+        cache: true
+        cache-dependency-path: "sdks/csharp/YourProject.csproj"
 ```
 
-**Note**: Use the appropriate GitHub Action for your language and ensure all actions are pinned to commit SHAs (not tags) for security:
+**Why Setup-Env Action?**
+
+- **Single source of truth**: Language versions defined once
+- **Consistency**: Same setup across CI, validation, and release workflows
+- **Maintainability**: Update Go version once, applies everywhere
+- **Automatic caching**: Dependency caching configured per language
+
+**Security**: All actions MUST be pinned to commit SHAs (not tags):
+
 ```yaml
+# ❌ Wrong (tag-based, mutable)
+uses: actions-rust-lang/setup-rust-toolchain@v1
+
+# ✅ Correct (SHA-pinned, immutable)
 uses: actions-rust-lang/setup-rust-toolchain@1fbea72663f6d4c03efaab13560c8a24cfd2a7cc # v1.0.0
 ```
 
-### 7.4: Create CI Workflow
+### 7.4: Update Reusable CI Workflow
+
+Update `.github/workflows/reusable-ci.yml` to pass your language flag to setup-env:
+
+```yaml
+steps:
+  - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+  - name: Setup Development Environment
+    uses: ./.github/actions/setup-env
+    with:
+      all: "false"
+      setup-go: ${{ inputs.sdk == 'go' }}
+      setup-python: ${{ inputs.sdk == 'python' }}
+      setup-java: ${{ inputs.sdk == 'java' }}
+      setup-node: ${{ inputs.sdk == 'typescript' || inputs.sdk == 'typespec' }}
+      setup-rust: ${{ inputs.sdk == 'rust' }} # Add your language
+```
+
+### 7.5: Create CI Workflow
 
 Create `.github/workflows/ci-rust.yml` (or your language):
 
@@ -1363,11 +1467,11 @@ Create `.github/workflows/ci-rust.yml` (or your language):
 name: CI (Rust)
 on:
   push:
-    branches: [ "main" ]
-    paths: ['sdks/rust/**', 'Taskfile.yml', '.github/workflows/ci-rust.yml', '.github/workflows/reusable-ci.yml']
+    branches: ["main"]
+    paths: ["sdks/rust/**", "Taskfile.yml", ".github/**"]
   pull_request:
-    branches: [ "main" ]
-    paths: ['sdks/rust/**', 'Taskfile.yml', '.github/workflows/ci-rust.yml', '.github/workflows/reusable-ci.yml']
+    branches: ["main"]
+    paths: ["sdks/rust/**", "Taskfile.yml", ".github/**"]
 
 jobs:
   check:
@@ -1379,7 +1483,7 @@ jobs:
           - os: ${{ github.event_name == 'push' && 'windows-latest' || '' }}
           - os: ${{ github.event_name == 'push' && 'macos-latest' || '' }}
         exclude:
-          - os: ''
+          - os: ""
 
     uses: ./.github/workflows/reusable-ci.yml
     with:
@@ -1389,12 +1493,13 @@ jobs:
 ```
 
 **Key Points**:
+
 - **Name Pattern**: Must be `CI (YourLanguage)` - the aggregator discovers workflows matching `^CI\\(.+\\)`
-- **Path Filters**: Include your SDK directory, root Taskfile, and workflow files
+- **Path Filters**: Include your SDK directory, root Taskfile, and `.github/**` (covers all workflow/action changes)
 - **Matrix Strategy**: Ubuntu-only on PRs, full matrix on push to main
 - **fail-fast: false**: Tests all platforms even if one fails
 
-### 7.5: Update Release Workflow
+### 7.6: Update Release Workflow
 
 Add publishing job to `.github/workflows/release.yml`:
 
@@ -1402,145 +1507,83 @@ Add publishing job to `.github/workflows/release.yml`:
 # Add after existing publish jobs:
 
 # ============================================================================
-# JOB 5: PUBLISH RUST (crates.io)
+# JOB: PUBLISH RUST (crates.io)
+# Runs ONLY after validation passes.
 # ============================================================================
 publish-rust:
-  needs: release-please
+  needs: [release-please, validate] # Must wait for validation!
   if: ${{ needs.release-please.outputs.releases_created }}
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-    
-    - name: Install Task
-      uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
-      with:
-        version: 3.x
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@1fbea72663f6d4c03efaab13560c8a24cfd2a7cc # v1.0.0
+    - name: Setup Development Environment
+      uses: ./.github/actions/setup-env
       with:
-        toolchain: stable
+        all: "false"
+        setup-rust: "true"
 
     - name: Publish
       env:
-        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      run: |
-        task rust:setup
-        cd sdks/rust
-        cargo publish
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
+      run: task rust:publish
 ```
 
-**Publishing Examples by Language**:
+**Key Changes from Old Pattern**:
 
-<details>
-<summary>C# → NuGet</summary>
+- **Uses setup-env action** instead of manual Task + toolchain setup
+- **Depends on `validate` job** - ensures quality gate passes first
+- **Consistent with other publish jobs** - same pattern across all languages
+
+**For Other Languages**:
 
 ```yaml
+# C# / NuGet
 publish-csharp:
-  needs: release-please
+  needs: [release-please, validate]
   if: ${{ needs.release-please.outputs.releases_created }}
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-    
-    - name: Install Task
-      uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
-      with:
-        version: 3.x
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+    - name: Setup Development Environment
+      uses: ./.github/actions/setup-env
       with:
-        dotnet-version: '9.0'
+        all: "false"
+        setup-dotnet: "true"
 
     - name: Publish
       env:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-      run: |
-        task csharp:setup
-        cd sdks/csharp
-        dotnet pack -c Release
-        dotnet nuget push bin/Release/*.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
+      run: task csharp:publish
 ```
 
-**Required Secret**: `NUGET_API_KEY`
-</details>
-
-<details>
-<summary>PHP → Packagist</summary>
-
-```yaml
-# PHP uses Composer and Packagist
-# Packagist automatically pulls from GitHub releases
-# No explicit publish job needed - just ensure composer.json has correct version
-
-# Optional: Add webhook trigger in Packagist settings
-```
-
-**Setup**: Configure Packagist webhook for auto-updates
-</details>
-
-<details>
-<summary>Ruby → RubyGems</summary>
-
-```yaml
-publish-ruby:
-  needs: release-please
-  if: ${{ needs.release-please.outputs.releases_created }}
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-    
-    - name: Install Task
-      uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
-      with:
-        version: 3.x
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Setup Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: '3.3'
-        bundler-cache: true
-
-    - name: Publish
-      env:
-        GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
-      run: |
-        task ruby:setup
-        cd sdks/ruby
-        gem build pseudata.gemspec
-        gem push pseudata-*.gem
-```
-
-**Required Secret**: `RUBYGEMS_API_KEY`
-</details>
-
-### 7.6: Configure Repository Secrets
+### 7.7: Configure Repository Secrets
 
 Add required secrets in GitHub repository settings (Settings → Secrets and variables → Actions):
 
 **Common Secrets** (already configured):
+
 - `PYPI_TOKEN` - Python package publishing
 - `NPM_TOKEN` - TypeScript package publishing
 - `OSSRH_USERNAME`, `OSSRH_TOKEN` - Java Maven Central
 - `MAVEN_GPG_PRIVATE_KEY`, `MAVEN_GPG_PASSPHRASE` - Java signing
 
 **Add for Your Language**:
-- Rust: `CARGO_REGISTRY_TOKEN` (from crates.io)
+
+- Rust: `CARGO_TOKEN` (from crates.io)
 - C#: `NUGET_API_KEY` (from nuget.org)
 - Ruby: `RUBYGEMS_API_KEY` (from rubygems.org)
-- PHP: No secret needed (Packagist auto-syncs)
+- PHP: No secret needed (Packagist auto-syncs from Git tags)
 
-### 7.7: Test CI Workflow
+### 7.8: Test CI Workflow
 
 1. **Push to feature branch**:
+
    ```bash
    git checkout -b test/add-rust-sdk
-   git add sdks/rust/
-   git commit -m "feat: add Rust SDK"
+   git add sdks/rust/ .github/
+   git commit -m "feat: add Rust SDK with CI"
    git push origin test/add-rust-sdk
    ```
 
@@ -1548,30 +1591,49 @@ Add required secrets in GitHub repository settings (Settings → Secrets and var
    - CI should trigger automatically
    - Check that `CI (Rust)` workflow runs
    - Verify tests pass on ubuntu-latest
+   - Check that `CI` aggregator discovers and includes your workflow
 
 3. **After PR approval, merge to main**:
    - Full matrix (ubuntu, windows, macos) runs
    - Verify all platforms pass
 
-4. **Test release workflow** (staging):
-   - Create test release on staging branch
-   - Verify publishing job runs correctly
-   - Check package appears in registry
+4. **Test validation workflow** (optional):
 
-### 7.8: Documentation Updates
+   ```bash
+   # Manually trigger validation for your branch
+   gh workflow run validate.yml --ref test/add-rust-sdk
+   ```
+
+5. **Test release workflow** (after merge):
+   - Wait for release-please to create release PR
+   - Merge release PR
+   - Verify validation runs and passes
+   - Check publishing job runs correctly
+   - Verify package appears in registry
+
+### 7.9: Documentation Updates
 
 Update these files to include your language:
 
-1. **Root README.md**: Add to language list
-2. **sdks/README.md**: Add SDK table entry
-3. **Website**: Update language support documentation
-4. **Changelog**: Document new SDK in release notes
+**Required**:
+
+- Main `README.md` - Add SDK to language list
+- `sdks/README.md` - Add SDK documentation link
+- Root `Taskfile.yml` - Add to aggregate commands (already done in 7.2)
+- `.github/actions/setup-env/action.yml` - Add toolchain setup (already done in 7.3)
+
+**If applicable**:
+
+- `typespec/docs/decorators/resources.md` - If new resource types added
+- `typespec/src/resources.tsp` - If new resources defined
+- Cross-language compatibility matrix
 
 ---
 
 ## Integration Checklist
 
 ### Core Implementation
+
 - [ ] **Generator**: PCG32 implementation with fixture tests
 - [ ] **SeedFrom**: FNV-1a hash with fixture tests
 - [ ] **ID Utils**: Encode/decode with fixture tests
@@ -1581,20 +1643,25 @@ Update these files to include your language:
 - [ ] **Arrays**: UserArray + AddressArray + fixture tests
 
 ### Code Generation
+
 - [ ] **Resource Emitter**: Embed locale data from `typespec/resources/`
 - [ ] **Interface Emitter**: Generate Primitives interface
 - [ ] **Array Emitter**: Generate array classes + generator functions
 
 ### CI/CD Integration
+
 - [ ] **Taskfile**: Created `sdks/your-language/Taskfile.yml` with setup/test/lint/format/clean tasks
 - [ ] **Root Taskfile**: Updated to include your language in aggregate commands
-- [ ] **Reusable CI**: Added language setup step to `.github/workflows/reusable-ci.yml`
-- [ ] **CI Workflow**: Created `.github/workflows/ci-yourlanguage.yml`
-- [ ] **Release Workflow**: Added publish job to `.github/workflows/release.yml`
+- [ ] **Setup-Env Action**: Added toolchain setup to `.github/actions/setup-env/action.yml`
+- [ ] **Reusable CI**: Updated to pass language flag to setup-env action
+- [ ] **CI Workflow**: Created `.github/workflows/ci-yourlanguage.yml` with matrix strategy
+- [ ] **Release Workflow**: Added publish job to `.github/workflows/release.yml` (depends on validate)
 - [ ] **Secrets**: Configured package registry API tokens in GitHub settings
-- [ ] **Testing**: Verified CI runs on PRs and pushes to main
+- [ ] **CI Testing**: Verified workflow runs on draft PR and passes on all platforms
+- [ ] **Validation**: Manually triggered `validate.yml` workflow for your branch
 
 ### Package & Documentation
+
 - [ ] **Package**: Published to language package registry
 - [ ] **SDK README**: Installation and usage examples
 - [ ] **Main README**: Updated language listing
@@ -1606,7 +1673,9 @@ Update these files to include your language:
 ## Common Pitfalls
 
 ### 1. RNG State Management
+
 ❌ **Wrong**: Multiple `rng()` calls repeat values
+
 ```rust
 fn bad(&self) -> String {
     format!("{}{}", self.rng().intn(10), self.rng().intn(10)) // Same digit twice!
@@ -1614,6 +1683,7 @@ fn bad(&self) -> String {
 ```
 
 ✅ **Correct**: Store rng in local variable
+
 ```rust
 fn good(&self) -> String {
     let mut rng = self.rng();
@@ -1622,15 +1692,19 @@ fn good(&self) -> String {
 ```
 
 ### 2. UTF-8 Handling
+
 Ensure byte-level operations for `seed_from`, rune/character operations for text primitives.
 
 ### 3. Unsigned Integer Handling
+
 JavaScript/TypeScript need `json-bigint` for 64-bit integers.
 
 ### 4. Float Literal Suffixes
+
 Java requires `f` suffix on float literals in generated code.
 
 ### 5. Resource Field Naming
+
 Match TypeSpec camelCase: `maleGivenNames` not `male_given_names` in runtime code.
 
 ---
@@ -1669,6 +1743,7 @@ Once implemented and tested:
    - Package registry publication proof
 
 **Review Process**:
+
 - Maintainers will verify cross-language consistency
 - Check CI/CD integration completeness
 - Review code quality and documentation

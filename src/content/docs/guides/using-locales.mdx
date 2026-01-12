@@ -42,18 +42,21 @@ Pseudata generates culturally appropriate data for multiple languages and region
 Pseudata organizes locale data into **bundles**—collections of related locales grouped by geography or business regions. Instead of loading all locale data at once, you choose which bundle to use based on your application's target markets.
 
 **Key benefits:**
+
 - **Small footprint**: Only load the locales you need
-- **Automatic optimization**: Build tools eliminate unused bundles
+- **Tree-shaking optimized**: Build tools automatically eliminate unused locale data
 - **Culturally authentic**: Names and addresses match real-world patterns per locale
 - **Easy to expand**: Start with one region, add more as you grow
 
 **What varies by locale:**
+
 - Person names (e.g., "John Smith" vs "田中 太郎" vs "محمد العلي")
 - Addresses (cities, states, street names, postal codes)
 - Phone number formats
 - Month and weekday names
 
 **What stays the same:**
+
 - Email domains (gmail.com, yahoo.com, etc.)
 - Generated IDs and UUIDs
 - Timestamps and numeric values
@@ -62,7 +65,7 @@ Pseudata organizes locale data into **bundles**—collections of related locales
 
 ## Default Behavior
 
-By default, Pseudata loads only the **US bundle** (`en_US` locale). This means you can start using Pseudata immediately without any configuration:
+By default, Pseudata loads only the **US bundle** (`en_us` locale). This means you can start using Pseudata immediately without any configuration:
 
 <Tabs>
   <TabItem label="Go">
@@ -80,6 +83,7 @@ By default, Pseudata loads only the **US bundle** (`en_US` locale). This means y
         fmt.Println(user.Name)  // → "John Smith"
     }
     ```
+
   </TabItem>
   
   <TabItem label="Java">
@@ -94,6 +98,7 @@ By default, Pseudata loads only the **US bundle** (`en_US` locale). This means y
         }
     }
     ```
+
   </TabItem>
   
   <TabItem label="Python">
@@ -104,6 +109,7 @@ By default, Pseudata loads only the **US bundle** (`en_US` locale). This means y
     user = users.at(1000)
     print(user.name)  # → "John Smith"
     ```
+
   </TabItem>
   
   <TabItem label="TypeScript">
@@ -114,6 +120,7 @@ By default, Pseudata loads only the **US bundle** (`en_US` locale). This means y
     const user = users.at(1000);
     console.log(user.name);  // → "John Smith"
     ```
+
   </TabItem>
 </Tabs>
 
@@ -122,12 +129,14 @@ By default, Pseudata loads only the **US bundle** (`en_US` locale). This means y
 ## When to Use Different Bundles
 
 **Use the default US bundle for:**
+
 - MVPs and prototypes
 - US-only applications
 - Development and demos
 - Minimal footprint
 
 **Switch to a different bundle when:**
+
 - Targeting multiple countries or regions
 - Building enterprise applications with regional divisions
 - Supporting international markets
@@ -138,14 +147,17 @@ By default, Pseudata loads only the **US bundle** (`en_US` locale). This means y
 ## Choosing a Bundle
 
 **Starting a new project?**
+
 - Stick with the default US bundle (no imports needed)
 - Upgrade to a different bundle when you expand
 
 **Need a specific country?**
+
 - Use single-country bundles (e.g., `CA`, `BR`, `JP`)
 - Automatically available for all supported countries
 
 **Expanding to a region?**
+
 - **North America**: Import NA bundle (US, Canada, Mexico)
 - **South America**: Import SA bundle (Brazil)
 - **Europe**: Import EU bundle (6 locales)
@@ -153,10 +165,12 @@ By default, Pseudata loads only the **US bundle** (`en_US` locale). This means y
 - **Middle East & Africa**: Import MEA bundle (2 locales)
 
 **Enterprise with regional divisions?**
+
 - **Americas**: Import AMER bundle (covers NA + SA)
 - **EMEA**: Import EMEA bundle (covers EU + MEA)
 
 **Need maximum coverage?**
+
 - Import World bundle (all supported locales)
 
 [See complete bundle list and locale details →](/reference/locales/)
@@ -177,25 +191,28 @@ Import a bundle and pass it via options to use locales from that region.
 
     users := pseudata.NewUserArray(42, pseudata.WithResources(na.Resources))
     ```
+
   </TabItem>
 
-  <TabItem label="Java">
-    ```java
-    import dev.pseudata.UserArray;
-    import dev.pseudata.resources.bundles.ResourcesNA;
-    
-    UserArray users = new UserArray(42, ResourcesNA.INSTANCE);
-    ```
-  </TabItem>
+<TabItem label="Java">
+  ```java
+  import dev.pseudata.UserArray;
+  import dev.pseudata.resources.bundles.na.Resources;
 
-  <TabItem label="Python">
-    ```python
-    from pseudata import UserArray
-    from pseudata.resources.bundles.na import resources_na
-    
-    users = UserArray(42, resources=resources_na)
-    ```
-  </TabItem>
+UserArray users = new UserArray(42, Resources.INSTANCE);
+
+````
+</TabItem>
+
+<TabItem label="Python">
+```python
+from pseudata import UserArray
+from pseudata.resources.bundles.na import Resources as NAResources
+
+users = UserArray(42, resources=NAResources)
+````
+
+</TabItem>
 
   <TabItem label="TypeScript">
     ```typescript
@@ -236,54 +253,30 @@ Import a bundle and pass it via options to use locales from that region.
     ```
   </TabItem>
 
-  <TabItem label="Java">
-    ```java
-    // Geographic regions
-    import dev.pseudata.resources.bundles.ResourcesUS;        // United States (default)
-    import dev.pseudata.resources.bundles.ResourcesNA;        // North America
-    import dev.pseudata.resources.bundles.ResourcesSA;        // South America
-    import dev.pseudata.resources.bundles.ResourcesEU;        // Europe
-    import dev.pseudata.resources.bundles.ResourcesMEA;       // Middle East & Africa
-    import dev.pseudata.resources.bundles.ResourcesAPAC;      // Asia-Pacific
-    
-    // Business regions
-    import dev.pseudata.resources.bundles.ResourcesAMER;      // Americas
-    import dev.pseudata.resources.bundles.ResourcesEMEA;      // Europe, Middle East & Africa
-    
-    // Cultural groupings
-    import dev.pseudata.resources.bundles.ResourcesLATAM;     // Latin America
-    import dev.pseudata.resources.bundles.ResourcesDACH;      // German-speaking countries
-    
-    // Complete
-    import dev.pseudata.resources.bundles.ResourcesWorld;     // All locales
-    
-    // Use with .INSTANCE
-    // Example: new UserArray(42, ResourcesEMEA.INSTANCE)
-    ```
-  </TabItem>
+<TabItem label="Java">
+  ```java // Geographic regions import dev.pseudata.resources.bundles.us.Resources; // United States (default) import
+  dev.pseudata.resources.bundles.na.Resources; // North America import dev.pseudata.resources.bundles.sa.Resources; // South
+  America import dev.pseudata.resources.bundles.eu.Resources; // Europe import dev.pseudata.resources.bundles.mea.Resources; //
+  Middle East & Africa import dev.pseudata.resources.bundles.apac.Resources; // Asia-Pacific // Business regions import
+  dev.pseudata.resources.bundles.amer.Resources; // Americas import dev.pseudata.resources.bundles.emea.Resources; // Europe,
+  Middle East & Africa // Cultural groupings import dev.pseudata.resources.bundles.latam.Resources; // Latin America import
+  dev.pseudata.resources.bundles.dach.Resources; // German-speaking countries // Complete import
+  dev.pseudata.resources.bundles.world.Resources; // All locales // Use with .INSTANCE // Example: new UserArray(42,
+  Resources.INSTANCE) ```
+</TabItem>
 
-  <TabItem label="Python">
-    ```python
-    # Geographic regions
-    from pseudata.resources.bundles.us import resources_us          # United States (default)
-    from pseudata.resources.bundles.na import resources_na          # North America
-    from pseudata.resources.bundles.sa import resources_sa          # South America
-    from pseudata.resources.bundles.eu import resources_eu          # Europe
-    from pseudata.resources.bundles.mea import resources_mea        # Middle East & Africa
-    from pseudata.resources.bundles.apac import resources_apac      # Asia-Pacific
-    
-    # Business regions
-    from pseudata.resources.bundles.amer import resources_amer      # Americas
-    from pseudata.resources.bundles.emea import resources_emea      # Europe, Middle East & Africa
-    
-    # Cultural groupings
-    from pseudata.resources.bundles.latam import resources_latam    # Latin America
-    from pseudata.resources.bundles.dach import resources_dach      # German-speaking countries
-    
-    # Complete
-    from pseudata.resources.bundles.world import resources_world    # All locales
-    ```
-  </TabItem>
+<TabItem label="Python">
+  ```python # Geographic regions from pseudata.resources.bundles.us import Resources as USResources # United States (default)
+  from pseudata.resources.bundles.na import Resources as NAResources # North America from pseudata.resources.bundles.sa import
+  Resources as SAResources # South America from pseudata.resources.bundles.eu import Resources as EUResources # Europe from
+  pseudata.resources.bundles.mea import Resources as MEAResources # Middle East & Africa from pseudata.resources.bundles.apac
+  import Resources as APACResources # Asia-Pacific # Business regions from pseudata.resources.bundles.amer import Resources as
+  AMERResources # Americas from pseudata.resources.bundles.emea import Resources as EMEAResources # Europe, Middle East & Africa
+  # Cultural groupings from pseudata.resources.bundles.latam import Resources as LATAMResources # Latin America from
+  pseudata.resources.bundles.dach import Resources as DACHResources # German-speaking countries # Complete from
+  pseudata.resources.bundles.world import Resources as WorldResources # All locales # Use directly: UserArray(42,
+  resources=EMEAResources) ```
+</TabItem>
 
   <TabItem label="TypeScript">
     ```typescript
@@ -312,4 +305,3 @@ Import a bundle and pass it via options to use locales from that region.
 ---
 
 For complete bundle information, locale details, and advanced usage patterns, see the [Locales Reference](/reference/locales/).
-

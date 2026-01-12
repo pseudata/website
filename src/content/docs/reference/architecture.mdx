@@ -62,6 +62,7 @@ At runtime, components work together to generate deterministic data:
 ![Runtime Flow](/images/runtime-flow.svg)
 
 The flow shows:
+
 1. **UserArray** (or AddressArray, etc.) extends **PseudoArray** base class
 2. **PseudoArray.at(index)** creates **Generator** with (worldSeed, typeSeq)
 3. **PseudoArray.at(index)** instantiates **Primitives** with (Generator, index)
@@ -85,6 +86,7 @@ Fixture-based tests ensure cross-language consistency:
 **Algorithm**: PCG32 (Permuted Congruential Generator) with 64-bit state.
 
 **Why PCG32?**
+
 - **Portable**: Simple to implement consistently across languages
 - **Fast**: Linear congruential base with efficient permutation
 - **High-quality**: Passes statistical randomness tests
@@ -92,6 +94,7 @@ Fixture-based tests ensure cross-language consistency:
 - **Small state**: 64 bits vs. Mersenne Twister's 2.5KB
 
 **Key Operations**:
+
 ```go
 // Initialize with seed
 state := seed
@@ -112,12 +115,14 @@ The state advances identically in Go, Java, Python, TypeScript (using BigInt), e
 **Algorithm**: FNV-1a hash with Murmur3 Avalanche finalization.
 
 **Why this combination?**
+
 - **FNV-1a**: Fast initial hash, simple to implement
 - **Murmur3 Avalanche**: Improves bit distribution, reduces collision clusters
 - **Portable**: Consistent across all languages
 - **No dependencies**: Pure algorithm, no external libraries
 
 **Implementation**:
+
 ```go
 func SeedFrom(s string) uint64 {
     // FNV-1a hash
@@ -126,14 +131,14 @@ func SeedFrom(s string) uint64 {
         hash ^= uint64(b)
         hash *= 1099511628211 // FNV prime
     }
-    
+
     // Murmur3 Avalanche finalization
     hash ^= hash >> 33
     hash *= 0xff51afd7ed558ccd
     hash ^= hash >> 33
     hash *= 0xc4ceb9fe1a85ec53
     hash ^= hash >> 33
-    
+
     return hash
 }
 ```
@@ -145,6 +150,7 @@ This allows readable test scenarios: `seed_from("test-scenario-1")` produces the
 **Purpose**: Encode seed and index into reversible UUID v8 identifiers.
 
 **Format**: UUID v8 with custom layout
+
 ```
 SSSSSSSS-SSSS-8SSS-vSTT-TTIIIIIIIII
 
@@ -156,12 +162,14 @@ v = Variant nibble + Skip bits (reserved)
 ```
 
 **Why UUID v8?**
+
 - **Standard**: RFC 9562 allows custom data
 - **Reversible**: Can extract seed and index
 - **Unique**: Seed + index pair ensures uniqueness
 - **Compatible**: Works with existing UUID infrastructure
 
 **Encoding**:
+
 ```go
 func (g *Generator) ID() string {
     // Extract seed and index bits
@@ -169,7 +177,7 @@ func (g *Generator) ID() string {
     seedLow := (g.seed >> 16) & 0xFFFF
     indexHigh := (g.index >> 48) & 0x0FFF
     indexLow := g.index & 0xFFFFFFFFFFFF
-    
+
     // Format as UUID v8
     return fmt.Sprintf("%08x-%04x-8%03x-%04x-%012x",
         seedHigh, seedLow, indexHigh,
@@ -185,6 +193,7 @@ func (g *Generator) ID() string {
 **Concept**: Arrays don't store data; they regenerate it on demand using deterministic seeding.
 
 **How It Works**:
+
 ```go
 type UserArray struct {
     seed uint64
@@ -194,7 +203,7 @@ func (a *UserArray) At(index int64) User {
     // Create generator with base seed + index
     gen := NewGenerator(a.seed, uint64(index))
     primitives := NewPrimitives(gen)
-    
+
     // Generate user deterministically
     return User{
         ID:    primitives.ID(),
@@ -206,6 +215,7 @@ func (a *UserArray) At(index int64) User {
 ```
 
 **Benefits**:
+
 - **Memory efficient**: `User[1_000_000]` uses ~16 bytes
 - **Instant access**: No pre-generation or loading time
 - **Reproducible**: Same index always returns same object
@@ -217,37 +227,69 @@ func (a *UserArray) At(index int64) User {
 
 **Purpose**: Provide locale-specific data (names, cities, etc.) for realistic generation.
 
-**Hierarchy**:
+**Atomic Module Structure**:
+
 ```
 typespec/resources/
-├── global/              # Universal data
-│   └── domains.txt
-├── en/                  # Language-specific
-│   ├── words.txt
-│   ├── months.txt
-│   └── weekdays.txt
-├── US/                  # Country-specific
-│   ├── cities.txt
-│   └── states.txt
-└── en_US/               # Locale-specific
-    ├── given_male_names.txt
-    ├── given_female_names.txt
-    ├── family_names.txt
-    └── street_names.txt
+├── general/            # Global resources (all locales)
+│   └── email_domains.txt
+├── lang/               # Language-specific
+│   ├── en/
+│   │   ├── months.txt
+│   │   └── weekdays.txt
+│   └── fr/
+│       ├── months.txt
+│       └── weekdays.txt
+├── country/            # Country-specific
+│   ├── us/
+│   │   ├── address_format.txt
+│   │   └── street_format.txt
+│   └── ca/
+│       ├── address_format.txt
+│       └── street_format.txt
+└── locale/             # Locale-specific
+    ├── en_us/
+    │   ├── given_male_names.txt
+    │   ├── given_female_names.txt
+    │   ├── family_names.txt
+    │   ├── cities.txt
+    │   └── streets.txt
+    └── fr_ca/
+        ├── given_male_names.txt
+        └── ...
 ```
 
+**Note:** All directory and file names use **lowercase** (e.g., `en_us`, not `en_US`) for cross-platform consistency.
+
 **Loading Strategy**:
-- **Build time**: `resource-emitter.js` discovers and embeds resources
-- **Runtime**: SDK provides resources as compiled-in constants/maps
+
+- **Build time**: `resource-emitter.js` discovers and embeds resources into atomic modules
+- **Runtime**: SDK provides resources as separate importable modules for tree-shaking
+- **Tree-shaking**: Import only the bundles you need (e.g., US bundle = ~50KB vs World = ~750KB)
 - **No fallback**: Each locale must have complete resource files
 
+**Generated Structure** (TypeScript example):
+
+```typescript
+// Atomic modules
+import { data as generalData } from "./resources/general/data.js";
+import { data as langenData } from "./resources/lang/en/data.js";
+import { data as countryusData } from "./resources/country/us/data.js";
+import { data as localeenusData } from "./resources/locale/en_us/data.js";
+
+// Pre-composed bundles
+import { ResourcesUS } from "./resources/bundles/us.js"; // ~50KB
+import { ResourcesWorld } from "./resources/bundles/world.js"; // ~750KB
+```
+
 **Access Pattern**:
+
 ```go
 data := p.resources()
 name := data.givenMaleNames[p.generator.Intn(len(data.givenMaleNames))]
 ```
 
-Resources are embedded at compile time, ensuring no runtime file I/O and consistent availability across languages. Each locale is self-contained with all required resource files.
+Resources are embedded at compile time with atomic modules enabling tree-shaking, ensuring no runtime file I/O and optimal bundle sizes. Each locale is self-contained with all required resource files.
 
 ## Code Generation Pipeline
 
@@ -283,16 +325,19 @@ Output: `User.json` schema for quicktype consumption.
 Three custom emitters generate SDK code:
 
 **interface-emitter.js**:
+
 - Reads `Primitives` interface from TypeSpec
 - Generates language-specific interface declarations
 - Maps TypeSpec types to native types (int64 → long/i64/number)
 
 **array-emitter.js**:
+
 - Finds models decorated with `@array(typeSequence)`
 - Generates `<Model>Array` classes extending `PseudoArray`
 - Implements `at(index)` using primitives + generators
 
 **resource-emitter.js**:
+
 - Scans `typespec/resources/` directory
 - Discovers locales automatically (no registration needed)
 - Embeds resource data as language-specific constants
@@ -300,6 +345,7 @@ Three custom emitters generate SDK code:
 #### 3. Quicktype → Models
 
 [Quicktype](https://quicktype.io/) transforms JSON Schema into idiomatic models:
+
 - Go: structs with json tags
 - Java: classes with Jackson annotations
 - Python: dataclasses
@@ -314,6 +360,7 @@ task generate
 ```
 
 Runs all emitters and code generators, producing:
+
 ```
 sdks/
 ├── go/
@@ -345,6 +392,7 @@ sdks/
 3. **All other languages** load the same fixtures and verify outputs match
 
 **Example Fixture**:
+
 ```json
 {
   "tests": [
@@ -392,6 +440,7 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 **Alternatives considered**: Mersenne Twister, xoroshiro128+, SplitMix64, Mulberry32
 
 **Why PCG32?**
+
 - **Portability**: Simpler to implement correctly across languages than MT19937
 - **Size**: 64-bit state vs. MT's 2.5KB
 - **Quality**: Sufficient for mock data (not cryptographic needs)
@@ -404,6 +453,7 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 **Alternatives considered**: Pre-generate and serialize, lazy generation with caching
 
 **Why virtual arrays?**
+
 - **Memory efficiency**: Testing pagination with millions of items
 - **Instant startup**: No loading or deserialization time
 - **Simplicity**: No cache invalidation logic
@@ -416,6 +466,7 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 **Alternatives considered**: Hand-write each SDK, shared C library with bindings, runtime code generation
 
 **Why code generation?**
+
 - **Single source of truth**: TypeSpec definitions prevent drift between languages
 - **Consistency**: Generated code follows identical patterns and structure
 - **Maintainability**: Changes propagate automatically to all SDKs
@@ -431,6 +482,7 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 **Alternatives considered**: Protocol Buffers, Thrift, OpenAPI, JSON Schema
 
 **Why TypeSpec?**
+
 - **Designed for code generation**: First-class emitter API
 - **Extensible**: Custom decorators (`@array`, `@generator`)
 - **Modern**: TypeScript-based, active development
@@ -442,6 +494,7 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 **Alternatives considered**: Pre-generate and serialize, lazy generation with caching
 
 **Why virtual arrays?**
+
 - **Memory efficiency**: Testing pagination with millions of items
 - **Instant startup**: No loading or deserialization time
 - **Simplicity**: No cache invalidation logic
@@ -454,6 +507,7 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 **Alternatives considered**: Property-based testing, manual verification, parallel implementations
 
 **Why fixtures?**
+
 - **Concrete verification**: Exact expected outputs, not properties
 - **Debugging**: Easy to reproduce failures with specific test cases
 - **Comprehensive**: Cover edge cases explicitly
@@ -461,4 +515,3 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 - **Simple**: JSON files are human-readable
 
 **Process**: Go generates fixtures → All languages verify → Commit fixtures to git
-

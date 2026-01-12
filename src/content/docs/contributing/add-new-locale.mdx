@@ -38,10 +38,12 @@ Adding a new locale involves collecting realistic data (names, cities, streets) 
 
 ## The Locale Checklist
 
-A complete locale implementation requires several files organized into directories representing the **locale** (e.g., `fr_FR`), **language** (e.g., `fr`), and **country** (e.g., `FR`).
+A complete locale implementation requires several files organized into directories representing the **locale** (e.g., `fr_fr`), **language** (e.g., `fr`), and **country** (e.g., `fr`).
+
+**Note:** All directory and file names use **lowercase** (e.g., `fr_fr`, `en_us`) for cross-platform consistency.
 
 ### Required Locale Files
-**Path**: `typespec/resources/{locale}/`
+**Path**: `typespec/resources/locale/{locale}/` (e.g., `locale/fr_fr/`)
 
 | File | Description | Example |
 | :--- | :--- | :--- |
@@ -54,7 +56,7 @@ A complete locale implementation requires several files organized into directori
 | `name_format.txt` | How names are ordered | `{given_name} {family_name}` |
 
 ### Required Language Files
-**Path**: `typespec/resources/{language}/`
+**Path**: `typespec/resources/lang/{language}/` (e.g., `lang/fr/`)
 
 | File | Description | Example |
 | :--- | :--- | :--- |
@@ -65,7 +67,7 @@ A complete locale implementation requires several files organized into directori
 | `weekdays.txt` | Weekday names in this language | lundi, mardi, mercredi |
 
 ### Required Country Files
-**Path**: `typespec/resources/{country}/`
+**Path**: `typespec/resources/country/{country}/` (e.g., `country/fr/`)
 
 | File | Description | Example |
 | :--- | :--- | :--- |
@@ -76,25 +78,27 @@ A complete locale implementation requires several files organized into directori
 
 ## Step 1: Create Directory Structure
 
-Localized data can be organized at three levels depending on how specific the data is:
+Localized data is organized at three levels depending on how specific the data is:
 
-### 1. Locale Level (`language_COUNTRY`)
-Use this for data that varies by both language and country (e.g., `en_US` vs `en_GB`). This is where most names and cities belong.
+### 1. Locale Level (`language_country`)
+Use this for data that varies by both language and country (e.g., `en_us` vs `en_gb`). This is where most names and cities belong.
 ```bash
-mkdir typespec/resources/fr_FR
+mkdir -p typespec/resources/locale/fr_fr
 ```
 
 ### 2. Language Level (`language`)
-Use this for data that is the same for all countries speaking that language (e.g., common nouns, adjectives).
+Use this for data that is the same for all countries speaking that language (e.g., common nouns, adjectives, months, weekdays).
 ```bash
-mkdir typespec/resources/fr
+mkdir -p typespec/resources/lang/fr
 ```
 
-### 3. Country Level (`COUNTRY`)
-Use this for data that is specific to a country but independent of the language (e.g., phone formats, timezones).
+### 3. Country Level (`country`)
+Use this for data that is specific to a country but independent of the language (e.g., phone formats, timezones, address formats).
 ```bash
-mkdir typespec/resources/FR
+mkdir -p typespec/resources/country/fr
 ```
+
+**Note:** Use lowercase for all directory names (`fr_fr`, not `fr_FR` or `FR_fr`).
 
 ## Step 2: Prepare Data Files
 
@@ -104,7 +108,7 @@ Each `.txt` file must follow these rules:
 - **Cleaning**: No empty lines, no leading/trailing whitespace.
 - **Uniqueness**: Avoid duplicate entries within a file.
 
-Example `fr_FR/cities.txt`:
+Example `locale/fr_fr/cities.txt`:
 ```text
 Paris
 Marseille
@@ -135,10 +139,15 @@ Used in `phone_number_patterns.txt`. Use `#` for a random digit:
 Run the code generation to embed the new data into the SDKs:
 
 ```bash
+cd pseudata-poc
 task generate
 ```
 
-Verify that the new locale appears in the generated `AVAILABLE_LOCALES` list in each SDK (e.g., `sdks/go/resources.go`).
+Verify that the new locale appears in:
+1. **Atomic modules** generated in `sdks/{language}/resources/locale/fr_fr/data.{ext}`
+2. **Bundles** updated to include the new locale (check `resources/bundles/world.{ext}`)
+3. **AVAILABLE_LOCALES** list in each SDK (e.g., `sdks/go/resources.go`)
+4. Regional bundles automatically include the locale if it matches their geography
 
 ## Fixture-Based Testing
 
@@ -147,10 +156,10 @@ After adding a locale, add a few test cases to the **Testing Guide** to ensure i
 Example fixture for French locale:
 ```json
 {
-  "name": "city_fr_FR",
+  "name": "city_fr_fr",
   "worldSeed": 42,
   "index": 0,
-  "locale": "fr_FR",
+  "locale": "fr_fr",
   "expected": "Paris"
 }
 ```

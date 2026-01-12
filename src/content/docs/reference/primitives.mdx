@@ -216,9 +216,22 @@ Generates a random float in the range [min, max).
 
 ---
 
-### `intn(n: int32): int32`
+### `intn(n: int64): int64`
 
 Generates a random integer in the range [0, n).
+
+**Parameters:**
+
+- `n`: `int64`
+
+**Returns:** `int64`
+
+---
+
+### `nextIndex(n: int32): int32`
+
+Generates a random array index in the range [0, n).
+Convenience method for array indexing that uses native int types.
 
 **Parameters:**
 
@@ -228,16 +241,16 @@ Generates a random integer in the range [0, n).
 
 ---
 
-### `intRange(min: int32, max: int32): int32`
+### `intRange(min: int64, max: int64): int64`
 
 Generates a random integer in the range [min, max).
 
 **Parameters:**
 
-- `min`: `int32`
-- `max`: `int32`
+- `min`: `int64`
+- `max`: `int64`
 
-**Returns:** `int32`
+**Returns:** `int64`
 
 ---
 

@@ -51,7 +51,7 @@ Add your method signature to `typespec/src/primitives.tsp`:
 ```typescript
 interface Primitives {
   // ... existing methods ...
-  
+
   /**
    * Generates a hexadecimal color code.
    * Format: "#RRGGBB" with uppercase letters.
@@ -62,6 +62,7 @@ interface Primitives {
 ```
 
 The TypeSpec interface defines:
+
 - **Method name**: Must be camelCase
 - **Parameters**: Strongly typed (string, int32, float32, etc.)
 - **Return type**: Must match across all languages
@@ -77,6 +78,7 @@ npm run generate
 ```
 
 This updates the interface files in each SDK:
+
 - **Go**: `sdks/go/primitives.go` (interface)
 - **Java**: `sdks/java/src/main/java/dev/pseudata/Primitives.java` (interface)
 - **Python**: `sdks/python/pseudata/primitives.py` (Protocol)
@@ -160,6 +162,7 @@ def hex_color(self) -> str:
 ### Python-Specific Considerations
 
 **Method names**: Use snake_case to follow Python conventions:
+
 - TypeSpec `hexColor()` → Python `hex_color()`
 
 **Resource access**: Use dictionary syntax:
@@ -256,6 +259,7 @@ Primitive fixtures test individual method outputs for specific seeds:
 ### When to Add Primitive Fixtures
 
 Add fixture tests for primitives that:
+
 - Have complex logic (multiple RNG calls, conditionals)
 - Use resources (locale-specific data)
 - Involve formatting or string manipulation
@@ -278,7 +282,7 @@ func TestHexColorFixtures(t *testing.T) {
         {42, 0, 0, "#A3D5F1"},
         {100, 0, 0, "#7F2A9B"},
     }
-    
+
     for _, tc := range cases {
         p := NewPrimitivesImpl(tc.worldSeed, tc.typeSeq, tc.index)
         got := p.HexColor()
@@ -337,13 +341,13 @@ const names = RESOURCES[locale].givenMaleNames;
 
 Keep types consistent across languages:
 
-| TypeSpec | Go | Java | Python | TypeScript |
-|----------|-------|------|--------|------------|
-| `int32` | `int64` | `int` | `int` | `number` |
-| `int64` | `int64` | `long` | `int` | `number` |
-| `float32` | `float32` | `float` | `float` | `number` |
-| `string` | `string` | `String` | `str` | `string` |
-| `boolean` | `bool` | `boolean` | `bool` | `boolean` |
+| TypeSpec  | Go        | Java      | Python  | TypeScript |
+| --------- | --------- | --------- | ------- | ---------- |
+| `int32`   | `int64`   | `int`     | `int`   | `number`   |
+| `int64`   | `int64`   | `long`    | `int`   | `number`   |
+| `float32` | `float32` | `float`   | `float` | `number`   |
+| `string`  | `string`  | `String`  | `str`   | `string`   |
+| `boolean` | `bool`    | `boolean` | `bool`  | `boolean`  |
 
 ### 4. String Case Conventions
 
@@ -379,7 +383,7 @@ After implementing in all supported languages, use your primitive in TypeSpec mo
 model Product {
   @generator("id")
   id: string;
-  
+
   @generator("hexColor")
   color: string;
 }
@@ -391,7 +395,7 @@ model Product {
 model Product {
   @generator("id")
   id: string;
-  
+
   @template("Item #{digit(4)} - {hexColor}")
   product_code: string;
 }
@@ -405,7 +409,7 @@ For primitives with parameters, pass them in the decorator:
 model User {
   @generator("id")
   id: string;
-  
+
   @generator("probability", 0.75)
   email_verified: boolean;
 }
@@ -441,4 +445,3 @@ func (p *PrimitivesImpl) PhoneNumber() string {
 ```
 
 Ensure formatting logic is identical across all languages to maintain determinism.
-

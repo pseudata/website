@@ -204,12 +204,12 @@ struct Generator {
 impl Generator {
     fn new(seed: u64, seq: u64) -> Self;
     fn advance(&mut self, delta: u64);
-    fn next_int(&mut self) -> u32;
-    fn intn(&mut self, n: i32) -> i32;
+    fn next_int(&mut self) -> u32;        // Core PCG32 output: uint32
+    fn intn(&mut self, n: u32) -> u32;    // Uses u32 like Go
     fn probability(&mut self, p: f32) -> bool;
     fn next_float(&mut self) -> f32;
     fn next_bool(&mut self) -> bool;
-    fn int_range(&mut self, min: i32, max: i32) -> i32;
+    fn int_range(&mut self, min: u32, max: u32) -> u32;  // Uses u32 like Go
     fn float_range(&mut self, min: f32, max: f32) -> f32;
     fn uuid(&mut self) -> String;
 }
@@ -221,6 +221,7 @@ impl Generator {
 - **Advance**: Jump to arbitrary position in O(log n) time
 - **Bounded random**: `intn(n)` must use unbiased method (rejection sampling)
 - **UUID v4**: Generate RFC 4122 compliant UUIDs
+- **Unsigned semantics**: PCG32 produces `uint32` values. Languages without unsigned types (e.g., Java) should use wider types (`long`) to represent the full uint32 range
 
 **Test**: `fixtures/pcg32_test_vectors.json`
 

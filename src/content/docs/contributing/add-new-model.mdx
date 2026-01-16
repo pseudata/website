@@ -1,6 +1,6 @@
 ---
 title: Add a New Model
-description: Learn how to add new data models and their corresponding virtual arrays to Pseudata using TypeSpec definitions.
+description: Learn how to add new data models and their corresponding PseudoArrays to Pseudata using TypeSpec definitions.
 sidebar:
   order: 1
 head:
@@ -12,7 +12,7 @@ head:
         "@context": "https://schema.org",
         "@type": "TechArticle",
         "headline": "Add a New Model to Pseudata",
-        "description": "Learn how to add new data models and their corresponding virtual arrays to Pseudata using TypeSpec definitions.",
+        "description": "Learn how to add new data models and their corresponding PseudoArrays to Pseudata using TypeSpec definitions.",
         "author": {
           "@type": "Organization",
           "name": "Pseudata",
@@ -135,7 +135,7 @@ Check that files were created in all SDK directories:
 
 ## Step 4: Use the New Model
 
-The generated array classes provide O(1) access to deterministic instances:
+The generated array classes provide $O(\log n)$ access to deterministic instances:
 
 ```go
 // Go
@@ -233,4 +233,3 @@ Run `tsp compile src` from the TypeSpec directory to see detailed error messages
 **Quicktype fails**
 
 Verify that all model field types are valid JSON Schema types. Complex TypeSpec types may need conversion.
-

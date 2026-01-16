@@ -1,0 +1,531 @@
+---
+title: Pseudo-Arrays
+description: Infinite deterministic arrays that generate elements on-demand using pseudo-random algorithms, providing O(log n) access with zero memory overhead.
+sidebar:
+  order: 4
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Pseudo-Arrays",
+        "description": "Infinite deterministic arrays that generate elements on-demand using pseudo-random algorithms, providing O(log n) access with zero memory overhead",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/reference/pseudo-arrays/"
+        },
+        "keywords": ["pseudo-array", "infinite array", "deterministic", "O(log n)", "zero memory", "pseudo-random", "PCG32", "virtual array"]
+      }
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+A *pseudo-array* is an infinite, deterministic array that generates elements on-demand using pseudo-random algorithms. Each *index* always produces the same element for a given *world-seed* and *type-sequence*, with **$O(\log n)$ access** and **zero memory overhead**.
+
+The key insight: instead of storing billions of records in memory, *pseudo-arrays* calculate each element when you access it. The same index always returns the same element because it uses the deterministic PCG32 algorithm with hierarchical seeding: `Generator(worldSeed, typeSeq).Advance(index)`.
+
+In traditional systems, generating test data means creating and storing arrays in memory or databases. With *pseudo-arrays*, you can instantly access the billionth user or the trillionth address without iterating or storing any data - it calculates on demand and is mathematically guaranteed to be consistent across all languages.
+
+## How It Works
+
+PseudoArray is an abstract base class that concrete types (like `UserArray`, `AddressArray`) extend. Each subclass implements the `generate()` method to define how to create an element at a specific index.
+
+**The Generation Process:**
+
+1. **Create** a *pseudo-array* with a *world-seed* and *type-sequence*
+2. **Access** any index using `.at(index)` 
+3. **Generate** the element using `Generator(worldSeed, typeSeq).Advance(index)`
+4. **Return** the generated element (not stored, just calculated)
+
+**Key Properties:**
+
+* **Deterministic**: Same `worldSeed`, `typeSeq`, and `index` always produce the same element
+* **Infinite**: Access any index from 0 to 2^40-1 (over 1 trillion elements)
+* **Zero memory**: Each element is calculated on-demand, not stored
+* **$O(\log n)$ access**: Direct index access without iteration
+* **Cross-language consistent**: Same element in **Go**, **Java**, **Python**, **TypeScript** and more
+
+## PseudoArray Class
+
+The **Interface** tab shows the PseudoArray base class API. All concrete array types extend this class.
+
+The **Implementation** tab contains the reference implementation showing how the base class works.
+
+<Tabs>
+  <TabItem label="Interface">
+```typescript
+/**
+ * PseudoArray<T>
+ * Infinite deterministic array of items of type T.
+ * Provides constant-time random access to deterministically generated items
+ * without storing them in memory.
+ */
+declare abstract class PseudoArray<T> {
+    /**
+     * @param worldSeed - Base seed for deterministic generation.
+     * @param typeSeq - Type sequence identifier (e.g., 101 for Users, 110 for Addresses).
+     */
+    constructor(worldSeed: number | bigint, typeSeq: number | bigint);
+
+    /**
+     * Returns the item at the specified index.
+     * The same index always produces the same item.
+     * @param index - Array index (0 to 2^40-1).
+     * @returns Generated item at the specified index.
+     */
+    public at(index: number | bigint): T;
+
+    /**
+     * Subclasses must implement this to define item generation logic.
+     * @param worldSeed - Base seed for the array.
+     * @param typeSeq - Type sequence identifier.
+     * @param index - Array index position.
+     * @returns Generated item of type T.
+     */
+    protected abstract generate(
+        worldSeed: number | bigint,
+        typeSeq: number | bigint,
+        index: number
+    ): T;
+}
+```
+  </TabItem>
+  <TabItem label="Implementation">
+```typescript
+/**
+ * PseudoArray<T>
+ * Infinite deterministic array of items of type T.
+ */
+export abstract class PseudoArray<T> {
+    protected worldSeed: number | bigint;
+    protected typeSeq: number | bigint;
+
+    /**
+     * @param worldSeed - Base seed for deterministic generation.
+     * @param typeSeq - Type sequence identifier.
+     */
+    constructor(worldSeed: number | bigint, typeSeq: number | bigint) {
+        this.worldSeed = worldSeed;
+        this.typeSeq = typeSeq;
+    }
+
+    /**
+     * Returns the item at the specified index.
+     * @param index - Array index (non-negative).
+     * @returns Generated item at the specified index.
+     */
+    public at(index: number | bigint): T {
+        const idx = Number(index);
+        return this.generate(this.worldSeed, this.typeSeq, idx);
+    }
+
+    /**
+     * Subclasses implement this to define generation logic.
+     * @param worldSeed - Base seed for the array.
+     * @param typeSeq - Type sequence identifier.
+     * @param index - Array index position.
+     * @returns Generated item of type T.
+     */
+    protected abstract generate(
+        worldSeed: number | bigint,
+        typeSeq: number | bigint,
+        index: number
+    ): T;
+}
+```
+  </TabItem>
+</Tabs>
+
+## Concrete Implementations
+
+PseudoArray is abstract - you use concrete implementations like `UserArray` and `AddressArray`.
+
+### UserArray
+
+Generates OIDC-compliant user objects with names, emails, avatars, and temporal data.
+
+<Tabs>
+  <TabItem label="Go">
+```go
+import "github.com/pseudata/pseudata"
+
+users := pseudata.NewUserArray(42)  // worldSeed = 42, typeSeq = 101
+
+user := users.At(1000)
+fmt.Println(user.Name)     // "John Smith"
+fmt.Println(user.Email)    // "john.smith@example.com"
+fmt.Println(user.ID())     // PseudoID: "0000002a-0000-8000-a065-00000003e8"
+
+// Access any index instantly
+billionthUser := users.At(1_000_000_000)  // O(log n)
+```
+  </TabItem>
+  <TabItem label="Java">
+```java
+import dev.pseudata.UserArray;
+
+UserArray users = new UserArray(42L);  // worldSeed = 42, typeSeq = 101
+
+User user = users.at(1000);
+System.out.println(user.name());     // "John Smith"
+System.out.println(user.email());    // "john.smith@example.com"
+System.out.println(user.id());       // PseudoID: "0000002a-0000-8000-a065-00000003e8"
+
+// Access any index instantly
+User billionthUser = users.at(1_000_000_000);  // O(log n)
+```
+  </TabItem>
+  <TabItem label="Python">
+```python
+from pseudata import UserArray
+
+users = UserArray(42)  # worldSeed = 42, typeSeq = 101
+
+user = users[1000]
+print(user.name)     # "John Smith"
+print(user.email)    # "john.smith@example.com"
+print(user.id())     # PseudoID: "0000002a-0000-8000-a065-00000003e8"
+
+# Access any index instantly
+billionth_user = users[1_000_000_000]  # O(log n)
+```
+  </TabItem>
+  <TabItem label="TypeScript">
+```typescript
+import { UserArray } from '@pseudata/core';
+
+const users = new UserArray(42n);  // worldSeed = 42, typeSeq = 101
+
+const user = users.at(1000);
+console.log(user.name);           // "John Smith"
+console.log(user.email);          // "john.smith@example.com"
+console.log(user.id());           // PseudoID: "0000002a-0000-8000-a065-00000003e8"
+
+// Access any index instantly
+const billionthUser = users.at(1_000_000_000);  // O(log n) - no iteration needed
+```
+  </TabItem>
+</Tabs>
+
+### AddressArray
+
+Generates locale-aware address objects with street, city, state, and postal code.
+
+<Tabs>
+  <TabItem label="Go">
+```go
+addresses := pseudata.NewAddressArray(42)
+
+address := addresses.At(500)
+fmt.Println(address.StreetAddress)  // "123 Main St"
+fmt.Println(address.City)           // "Springfield"
+fmt.Println(address.PostalCode)     // "12345"
+```
+  </TabItem>
+  <TabItem label="Java">
+```java
+AddressArray addresses = new AddressArray(42L);
+
+Address address = addresses.at(500);
+System.out.println(address.streetAddress());  // "123 Main St"
+System.out.println(address.city());           // "Springfield"
+System.out.println(address.postalCode());     // "12345"
+```
+  </TabItem>
+  <TabItem label="Python">
+```python
+addresses = AddressArray(42)
+
+address = addresses[500]
+print(address.street_address)  # "123 Main St"
+print(address.city)            # "Springfield"
+print(address.postal_code)     # "12345"
+```
+  </TabItem>
+  <TabItem label="TypeScript">
+```typescript
+import { AddressArray } from '@pseudata/core';
+
+const addresses = new AddressArray(42n);  // worldSeed = 42, typeSeq = 110
+
+const address = addresses.at(500);
+console.log(address.streetAddress);  // "123 Main St"
+console.log(address.city);           // "Springfield"
+console.log(address.postalCode);     // "12345"
+```
+  </TabItem>
+</Tabs>
+
+## Usage Patterns
+
+### Single Item Access
+
+Access any index directly with $O(\log n)$ complexity:
+
+```typescript
+const users = new UserArray(42n);
+
+const user1 = users.at(0);        // First user
+const user2 = users.at(999);      // 1000th user
+const user3 = users.at(1_000_000); // Millionth user - instant access!
+```
+
+### Cross-Language Testing
+
+Same data across all languages:
+
+```typescript
+// Frontend (TypeScript)
+const users = new UserArray(42n);
+const testUser = users.at(1000);
+// testUser.id() = "0000002a-0000-8000-a065-00000003e8"
+```
+
+```python
+# Backend (Python)
+users = UserArray(42)
+test_user = users[1000]
+# test_user.id() = "0000002a-0000-8000-a065-00000003e8"
+# Same ID, same data!
+```
+
+### Load Testing
+
+Each worker accesses its own index range without coordination:
+
+```typescript
+// Worker 1: indices 0-999
+for (let i = 0; i < 1000; i++) {
+    const user = users.at(i);
+    // Process user...
+}
+
+// Worker 2: indices 1000-1999
+for (let i = 1000; i < 2000; i++) {
+    const user = users.at(i);
+    // Process user...
+}
+
+// No conflicts, no coordination needed
+```
+
+## Benefits
+
+### Zero Memory Overhead
+
+Traditional array:
+```typescript
+const users = [];
+for (let i = 0; i < 1_000_000; i++) {
+    users.push(generateUser(i));  // Stores in memory
+}
+// Memory usage: ~500MB for 1M users
+```
+
+PseudoArray:
+```typescript
+const users = new UserArray(42n);
+const user = users.at(1_000_000);  // Calculates on demand
+// Memory usage: ~100 bytes (just the worldSeed and typeSeq)
+```
+
+### Infinite Scale
+
+```typescript
+const users = new UserArray(42n);
+
+// All of these work instantly:
+users.at(1_000);              // Thousandth user
+users.at(1_000_000);          // Millionth user
+users.at(1_000_000_000);      // Billionth user
+users.at(1_099_511_627_775);  // Maximum index (2^40-1)
+
+// No pre-generation, no memory issues
+```
+
+### Deterministic
+
+```typescript
+const users1 = new UserArray(42n);
+const users2 = new UserArray(42n);
+
+users1.at(500).name === users2.at(500).name;  // true
+users1.at(500).email === users2.at(500).email;  // true
+users1.at(500).id() === users2.at(500).id();  // true
+
+// Same seed = same data, always
+```
+
+### Cross-Language Consistency
+
+<Tabs>
+  <TabItem label="Go">
+```go
+// Go
+NewUserArray(42).At(1000).Name
+// "John Smith"
+```
+  </TabItem>
+  <TabItem label="Java">
+```java
+// Java
+new UserArray(42L).at(1000).name()
+// "John Smith"
+```
+  </TabItem>
+  <TabItem label="Python">
+```python
+# Python
+UserArray(42)[1000].name
+# "John Smith"
+```
+  </TabItem>
+  <TabItem label="TypeScript">
+```typescript
+// TypeScript
+new UserArray(42n).at(1000).name
+// "John Smith"
+```
+  </TabItem>
+</Tabs>
+
+All languages produce identical data!
+
+## When to Use
+
+*Pseudo-arrays* are designed for test data, mock data, and development scenarios where deterministic, repeatable data is valuable.
+
+**Ideal for:**
+- **Unit testing**: Consistent test data across test runs
+- **Integration testing**: Same data across frontend and backend tests
+- **Load testing**: Generate billions of entities without memory overhead
+- **QA/Demos**: Reproducible scenarios across environments
+- **Development**: Realistic data without database dependencies
+- **Documentation**: Consistent examples in code samples
+
+**Not suitable for:**
+- **Production databases**: Use real data from your database
+- **User-generated content**: This is synthetic, not real user data
+- **Unique constraints**: Generated data may have collisions (e.g., email uniqueness not guaranteed)
+- **Compliance requirements**: Not suitable where real anonymized data is required
+
+**Key advantage**: Deterministic, infinite-scale data with zero memory overhead - perfect for testing and development where consistency matters more than randomness.
+
+## Deep Dive
+
+### Hierarchical Seeding
+
+*Pseudo-arrays* use the PCG32 algorithm with hierarchical seeding:
+
+**Formula**: $Generator(worldSeed, typeSeq).Advance(index)$
+
+![](/images/hierarchical-seeding.svg)
+
+**Why this works:**
+
+- **PCG32 streams**: Each typeSeq is a separate stream, ensuring no overlap
+- **Advance operation**: Jumps directly to the correct state for any index
+- **Deterministic**: Mathematical guarantee of same output for same inputs
+
+### Type Sequence Identifiers
+
+Each concrete type has a unique *type-sequence* identifier:
+
+| Type | TypeSeq | Purpose |
+|------|---------|---------|
+| User | 101 | OIDC-compliant user objects |
+| Address | 110 | Locale-aware address objects |
+| Custom | 1024+ | Reserved for future types |
+
+This ensures:
+- `UserArray(42).at(100)` and `AddressArray(42).at(100)` are independent
+- No overlap between types even with same worldSeed and index
+- Each type has its own "stream" of random numbers
+
+## Integration with Pseudo-IDs
+
+Every element generated by *pseudo-arrays* has a [Pseudo ID](/reference/pseudo-ids/) that encodes its position:
+
+```typescript
+const users = new UserArray(42n);  // worldSeed = 42, typeSeq = 101
+const user = users.at(1000);       // index = 1000
+
+user.id();
+// "0000002a-0000-8000-a065-00000003e8"
+//  └world─┘        └─typeSeq+index─┘
+//    42              101    1000
+```
+
+**The PseudoID encodes:**
+- *World-seed*: 42
+- *Type-sequence*: 101 (User)
+- *Index*: 1000
+
+This means you can decode a PseudoID to find the exact array position:
+
+```typescript
+import { decodeId } from '@pseudata/core';
+
+const components = decodeId(user.id());
+// components.worldSeed = 42
+// components.typeSeq = 101
+// components.index = 1000
+
+// Reconstruct the exact same user
+const users = new UserArray(components.worldSeed);
+const sameUser = users.at(components.index);
+// sameUser.id() === user.id()  // true
+```
+
+## Integration with Pseudo-Links
+
+You can use *pseudo links* with the `PseudoLink` class ([see reference](/reference/pseudo-links/)) to create indices with relational properties:
+
+```typescript
+import { UserArray, PseudoLink } from '@pseudata/core';
+
+const link = new PseudoLink(17, 3);
+const users = new UserArray(42n);
+
+// Create user at specific coordinates
+const userIndex = link.spawn(
+    1,     // island: 1
+    1000,  // neighborhood: 1000
+    0      // connector: 0
+);
+
+const user = users.at(userIndex);
+
+// Find related users in same neighborhood
+for (let slot = 0; slot <= link.maxConnectors(); slot++) {
+    const relatedIndex = link.resolve(userIndex, slot);
+    const relatedUser = users.at(relatedIndex);
+    // Related users share neighborhood and island bits
+}
+```
+
+This combines the infinite scale of *pseudo-arrays* with the relational capabilities of *pseudo-links*.
+
+## See Also
+
+- **[Pseudo-IDs](/reference/pseudo-ids/)** - Learn about the deterministic IDs that identify each element
+- **[Pseudo-Links](/reference/pseudo-links/)** - Use coordinate-based indices for relational test data
+- **[Models](/reference/models/)** - See all available types and their properties
+- **[Primitives](/reference/primitives/)** - Understand the generator functions used to create element properties

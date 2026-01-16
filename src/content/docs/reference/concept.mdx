@@ -1,6 +1,6 @@
 ---
 title: "Concept"
-description: "How Pseudata uses PCG32 and virtual arrays to deliver identical mock data across all programming languages"
+description: "How Pseudata uses PCG32 and pseudo-arrays to deliver identical mock data across all programming languages"
 sidebar:
   order: 1
 head:
@@ -12,7 +12,7 @@ head:
         "@context": "https://schema.org",
         "@type": "TechArticle",
         "headline": "Concept",
-        "description": "How Pseudata uses PCG32 and virtual arrays to deliver identical mock data across all programming languages",
+        "description": "How Pseudata uses PCG32 and pseudo-arrays to deliver identical mock data across all programming languages",
         "author": {
           "@type": "Organization",
           "name": "Pseudata",
@@ -31,7 +31,7 @@ head:
           "@type": "WebPage",
           "@id": "https://pseudata.dev/reference/concept/"
         },
-        "keywords": ["PCG32", "virtual arrays", "deterministic", "mock data", "algorithm", "cross-language"]
+        "keywords": ["PCG32", "pseudo-arrays", "deterministic", "mock data", "algorithm", "cross-language"]
       }
 ---
 
@@ -39,7 +39,7 @@ head:
 
 Unlike traditional mock data libraries which function as isolated ecosystems, or static datasets which consume large amounts of memory, Pseudata uses **standardized procedural generation algorithms** (specifically PCG32) to create complex, realistic object graphs that are identical across all supported languages.
 
-**The Promise:** `User[1000]` with seed `42` always generates a user with the exact same name, UUID, email, and avatar—regardless of whether you access it in Go, Java, Python, or TypeScript.
+**The Promise:** `User[1000]` with seed `42` always generates a user with the exact same name, UUID, email, and avatar—regardless of whether you access it in **Go**, **Java**, **Python**, or **TypeScript**.
 
 ## The Problem
 
@@ -55,57 +55,55 @@ Pseudata solves these problems by treating data generation as a unified algorith
 
 ### Core Philosophy
 
-- **Virtual Arrays:** Data is never stored—it's calculated on demand. A `UserArray` of size 10 billion takes up only 16 bytes of memory (two 64-bit integers: one for the world seed and one for the type sequence).
-- **O(1) Access:** Accessing the 1,000,000th item is as fast as accessing the 1st. There is no iteration penalty.
+- **pseudo-arrays:** Data is never stored—it's calculated on demand. A `UserArray` of size 10 billion takes up only 16 bytes of memory (two 64-bit integers: one for the world seed and one for the type sequence).
+- **$O(\log n)$ Access:** Accessing the 1,000,000th item is as fast as accessing the 1st. There is no iteration penalty.
 - **Universal Consistency:** A seed of `42` produces the exact same dataset in all supported languages, enabling seamless cross-service testing.
 
 ## Key Capabilities
 
 ### Cross-Language Consistency
 
-Same seed produces identical data across all programming languages. A `User` object generated in Java has the exact same field names, value formats, and content as one generated in Python, Go, or TypeScript. This eliminates "works on my machine" integration bugs and enables seamless cross-service testing.
+Same seed produces identical data across all programming languages. A `User` object generated in Java has the exact same field names, value formats, and content as one generated in **Python**, **Go**, or TypeScript. This eliminates "works on my machine" integration bugs and enables seamless cross-service testing.
 
 Every field—from the user's gender to the milliseconds in a timestamp—is derived deterministically from the seed and index using the standardized PCG32 algorithm.
 
 ### Infinite Scale
 
-O(1) instant random access to any record in datasets of arbitrary size—accessing the 1,000,000th item is as fast as accessing the 1st. Because objects are transient (created only when requested), you can simulate "Big Data" environments with zero memory footprint. A `UserArray` of size 10 billion takes only 16 bytes of memory.
+$O(\log n)$ instant random access to any record in datasets of arbitrary size—accessing the 1,000,000th item is as fast as accessing the 1st. Because objects are transient (created only when requested), you can simulate "Big Data" environments with zero memory footprint. A `UserArray` of size 10 billion takes only 16 bytes of memory.
 
 Perfect for load testing and performance profiling where traditional approaches would exhaust system resources.
 
-### Multi-Locale Support
+### Stateless Relations
 
-Pseudata includes culturally authentic datasets for multiple locales, ensuring realistic international testing scenarios. The implementation provides curated name pools, addresses, and geographic data organized in three tiers:
+Create deterministic relationships between entities without requiring a database. *Pseudo-links* use a bit-coordinate system to encode relationships directly into IDs, enabling $O(1)$ navigation between related entities.
 
-**Tier 1 - High Value Markets:**
+By treating a 40-bit index as a coordinate (*island*, *neighborhood*, and *connector*), you can instantly calculate the ID of a related entity:
 
-- `en_US` - English (United States)
-- `zh_CN` - Chinese (Simplified)
-- `hi_IN` - Hindi (India)
-- `ja_JP` - Japanese (Japan)
+- **Zero Lookups:** No database queries or cache hits required
+- **Bidirectional:** If User A is in Group B, Group B "knows" it contains User A through the same shared bit pattern
+- **Stateless:** The relationship is defined by deterministic logic, not by stored state
+- **Shard-Aware:** The *island* component ensures related entities hash to the same partition in distributed systems, keeping relationships co-located
 
-**Tier 2 - Major Markets:**
+For example, you can encode a user at specific coordinates and then resolve related users in the same *neighborhood*—all relationships exist mathematically without any stored references.
 
-- `es_MX` - Spanish (Mexico)
-- `pt_BR` - Portuguese (Brazil)
-- `fr_FR` - French (France)
-- `de_DE` - German (Germany)
-- `ar_SA` - Arabic (Saudi Arabia)
-- `en_GB` - English (United Kingdom)
-- `en_CA` - English (Canada)
-- `fr_CA` - French (Canada)
+### Smart Locale Loading
 
-**Tier 3 - Edge Cases:**
+Traditional faker libraries load all locale data at once or require complex configuration. Pseudata uses a compositional architecture that eliminates duplication and enables precise control.
 
-- `hu_HU` - Hungarian (Hungary)
-- `tr_TR` - Turkish (Turkey)
-- `vi_VN` - Vietnamese (Vietnam)
+Data is organized into four intelligent layers:
 
-Each locale includes locale-specific first names (male/female), last names, cities, states/provinces, streets, and postal code formats. The roadmap includes additional locales based on community demand.
+- **General** - Shared by all locales (email domains)
+- **Language** - Linguistic data (months, weekdays, word lists)
+- **Country** - Geographic standards (address formats, phone patterns)
+- **Locale** - Cultural specificity (cities, names, streets)
+
+By default, only the US locale loads. Import regional bundles (NA, EU, APAC, MEA, SA, AMER, EMEA, LATAM, DACH, or World) as you expand globally. Modern build tools automatically tree-shake unused bundles—you only ship what you use.
+
+Pseudata includes culturally authentic datasets for multiple locales across North America, Europe, Asia-Pacific, Middle East, and South America. Each locale provides locale-specific names, addresses, and geographic data formatted according to regional conventions. See the [complete locale list](/reference/locales/#complete-locale-list) for all supported regions.
 
 ### Zero Dependencies
 
-Pseudata is implemented natively (no FFI bindings) ensuring zero external dependencies and optimal performance in every language. The initial implementation includes Go, Java, Python, and TypeScript. The roadmap includes C#, PHP, and Rust for backend services, as well as Swift and Dart for mobile development.
+Pseudata is implemented natively (no FFI bindings) ensuring zero external dependencies and optimal performance in every language. The initial implementation includes **Go**, **Java**, **Python**, and **TypeScript**. The roadmap includes **C\#**, **PHP**, and **Rust** for backend services, as well as **Swift** and **Dart** for mobile development.
 
 ## Technical Architecture
 
@@ -121,15 +119,15 @@ The algorithm operates on a 64-bit internal state using a Linear Congruential Ge
 
 ### Seeding Strategy
 
-To achieve O(1) random access, a hierarchical seeding strategy is used where each object is generated by an independent PCG32 instance:
+To achieve $O(\log n)$ random access, a hierarchical seeding strategy is used where each object is generated by an independent PCG32 instance:
 
 ```
-Generator(seed: WorldSeed, sequence: TypeSequence).Advance(Index)
+Generator(worldSeed, typeSeq).Advance(index)
 ```
 
-1.  **World Seed:** The global 64-bit integer provided by the developer (e.g., `42`).
-2.  **Index:** The position in the array (e.g., `50`).
-3.  **Type Sequence:** A unique constant ID for each data type (e.g., `101` for Users, `110` for Addresses) that serves as the stream identifier to prevent correlation between different arrays. The sequence value is internally transformed to an odd increment (`inc = (seq << 1) | 1`) as required by PCG32's LCG foundation.
+1.  **worldSeed:** The global 64-bit integer provided by the developer (e.g., `42`).
+2.  **index:** The position in the array (e.g., `50`).
+3.  **typeSeq:** A unique constant ID for each data type (e.g., `101` for Users, `110` for Addresses) that serves as the stream identifier to prevent correlation between different arrays. The sequence value is internally transformed to an odd increment (`inc = (seq << 1) | 1`) as required by PCG32's LCG foundation.
 
 When you call `users.at(50)`, the engine instantiates a PCG32 Generator with `seed = 42` and `sequence = 101` (internally converted to `inc = 203`), then advances it by `50` steps using PCG32's efficient `Advance()` function. This approach uses the mathematical properties of PCG32 to maintain proper stream independence and statistical quality. The generator produces all random values for that specific user object, then is discarded. This ensures User[50] with WorldSeed=42 always generates identical data, regardless of access order or previously generated objects.
 

@@ -186,9 +186,9 @@ func (g *Generator) ID() string {
 }
 ```
 
-### PseudoArray
+### Pseudo Arrays
 
-**Purpose**: Virtual arrays with O(1) access and zero memory overhead.
+**Purpose**: _Pseudo-Arrays_ with $O(\log n)$ access and zero memory overhead.
 
 **Concept**: Arrays don't store data; they regenerate it on demand using deterministic seeding.
 
@@ -448,11 +448,11 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 - **Better than Mulberry32**: 64-bit state vs. 32-bit, longer period, better statistical properties
 - **Proven**: Widely used, well-tested
 
-### Virtual Arrays over Pre-generation
+### Pseudo-Arrays over Pre-generation
 
 **Alternatives considered**: Pre-generate and serialize, lazy generation with caching
 
-**Why virtual arrays?**
+**Why Pseudo Arrays?**
 
 - **Memory efficiency**: Testing pagination with millions of items
 - **Instant startup**: No loading or deserialization time
@@ -489,11 +489,11 @@ Each SDK loads these fixtures and verifies exact matches. See the [Testing Guide
 - **JSON Schema output**: Can leverage quicktype
 - **Microsoft backing**: Long-term support expected
 
-### Virtual Arrays over Pre-generation
+### Pseudo Arrays over Pre-generation
 
 **Alternatives considered**: Pre-generate and serialize, lazy generation with caching
 
-**Why virtual arrays?**
+**Why Pseudo Arrays?**
 
 - **Memory efficiency**: Testing pagination with millions of items
 - **Instant startup**: No loading or deserialization time

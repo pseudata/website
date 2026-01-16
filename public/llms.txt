@@ -17,7 +17,7 @@ Pseudata uses the PCG32 (Permuted Congruential Generator) algorithm - a standard
 ## Key Features
 
 - **Cross-Language Consistency**: Same seed = same data across all languages
-- **O(1) Infinite Scale**: Virtual arrays allow instant access to any index (even the billionth record) without iterating
+- **O(log n) Infinite Scale**: PseudoArrays allow instant access to any index (even the billionth record) without iterating
 - **Multi-Locale Support**: 15+ locales with culturally appropriate names and addresses
 - **Zero Dependencies**: Pure native implementation in each language
 - **TypeSpec Code Generation**: Single source of truth generates all implementations
@@ -38,12 +38,12 @@ Planned: C#, Rust, PHP, Swift, Dart
 ## Documentation Structure
 
 - **/guides/get-started/** - Quick start with PCG32 explanation
-- **/reference/concept/** - Deep dive into virtual arrays and architecture
+- **/reference/concept/** - Deep dive into PseudoArrays and architecture
 - **/blog/introduction/** - Why cross-language consistency matters (includes faker.js comparison)
 
 ## Technical Architecture
 
-- **Virtual Arrays**: Data calculated on-demand, zero memory footprint
+- **PseudoArrays**: Data calculated on-demand, zero memory footprint
 - **PCG32 Algorithm**: Statistically superior RNG that passes BigCrush tests
 - **Hierarchical Seeding**: `Generator(WorldSeed, TypeSequence).Advance(Index)` - uses PCG32's Advance() for proper stream independence
 - **OIDC-Compliant**: User objects follow OpenID Connect standards
@@ -62,4 +62,3 @@ Active development (v0.0.1). No public releases yet. Watch GitHub for v0.1.0 ann
 ## License
 
 Apache License 2.0 - Open source and free to use
-

@@ -81,7 +81,7 @@ Key pages:
 - **Homepage** - Splash template with hero, features, and code examples
 - **Get Started** - Quick start with PCG32 explanation and installation
 - **Introduction (Blog)** - Complete blog post with comparison table and roadmap
-- **Concept** - Technical deep dive into virtual arrays and seeding
+- **Concept** - Technical deep dive into concepts
 - **404** - Custom error page with helpful navigation
 
 ## Custom Components

@@ -1,5 +1,7 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 
 // https://astro.build/config
 export default defineConfig({
@@ -14,19 +16,19 @@ export default defineConfig({
         {
           tag: "link",
           attrs: {
-            rel: "alternate",
-            type: "application/rss+xml",
-            title: "Pseudata Blog",
-            href: "/rss.xml",
+            rel: "stylesheet",
+            href: "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css",
+            integrity: "sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV",
+            crossorigin: "anonymous",
           },
         },
         {
           tag: "link",
           attrs: {
             rel: "alternate",
-            type: "text/plain",
-            title: "AI Information",
-            href: "/ai.txt",
+            type: "application/rss+xml",
+            title: "Pseudata Blog",
+            href: "/rss.xml",
           },
         },
         {
@@ -149,7 +151,13 @@ export default defineConfig({
           autogenerate: { directory: "reference" },
         },
         {
+          label: "Examples",
+          collapsed: true,
+          autogenerate: { directory: "examples" },
+        },
+        {
           label: "Contributing",
+          collapsed: true,
           autogenerate: { directory: "contributing" },
         },
         {
@@ -159,4 +167,8 @@ export default defineConfig({
       ],
     }),
   ],
+  markdown: {
+    remarkPlugins: [remarkMath],
+    rehypePlugins: [rehypeKatex],
+  },
 });

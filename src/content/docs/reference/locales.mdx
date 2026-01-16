@@ -1,12 +1,13 @@
 ---
 title: "Locales"
 description: "Multi-language and regional support with optimized resource bundles"
-order: 6
+sidebar:
+  order: 6
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-Pseudata supports **17 locales** across multiple languages and regions, providing culturally appropriate names, addresses, and geographic data. By default, Pseudata loads only the **US locale** (`en_US`). For multi-region support, you can import **regional bundles** that group related locales.
+Pseudata supports **multiple locales** across various languages and regions, providing culturally appropriate names, addresses, and geographic data. By default, Pseudata loads only the **US locale** (`en_US`). For multi-region support, you can import **regional bundles** that group related locales.
 
 > **New to locales?** See the [Using Locales guide](/guides/using-locales/) for a practical introduction.
 
@@ -148,7 +149,7 @@ Natural geographic regions aligned with where your application is deployed or wh
 - Use cases: European markets, multi-country EU apps
 
 **APAC (Asia-Pacific)**
-- Locales: `ja_JP`, `zh_CN`, `hi_IN`, `vi_VN`
+- Locales: `ja_JP`, `zh_CN`, `vi_VN`
 - Use cases: Asia-Pacific markets, APAC-focused applications
 
 **MEA (Middle East & Africa)**
@@ -198,7 +199,7 @@ Language and culture-based groupings that transcend national borders.
 
 ## Supported Locales
 
-Pseudata currently supports 17 locales across 12 languages and 16 countries. Each locale includes culturally appropriate data for names, addresses, and geographic information.
+Pseudata supports locales across multiple languages and countries. Each locale includes culturally appropriate data for names, addresses, and geographic information.
 
 ### Complete Locale List
 
@@ -219,7 +220,6 @@ Pseudata currently supports 17 locales across 12 languages and 16 countries. Eac
 | `tr_TR` | Turkish | Turkey | MEA, EMEA, World |
 | `ja_JP` | Japanese | Japan | APAC, World |
 | `zh_CN` | Chinese (Simplified) | China | APAC, World |
-| `hi_IN` | Hindi | India | APAC, World |
 | `vi_VN` | Vietnamese | Vietnam | APAC, World |
 
 ### Data Included Per Locale
@@ -271,7 +271,7 @@ Each locale provides:
 - Use **DACH** for German-speaking countries (Germany, Austria, Switzerland)
 
 **Need maximum locale coverage?**
-- Use **World** - All 17 locales
+- Use **World** - All available locales
 - Best for truly global platforms or when locale requirements are unknown
 - Useful for comprehensive testing suites
 
@@ -418,7 +418,7 @@ The default could have been a larger regional bundle like North America, but sin
 A monolithic approach would generate one large Resources file per locale containing all data (general, language, country, and locale-specific). Regional bundles would then be subsets of these full Resources.
 
 **Problems with monolithic:**
-- Language data duplicated for every locale (months, weekdays, word lists × 17 locales = 17 copies)
+- Language data duplicated for every locale (months, weekdays, word lists would be copied for each locale)
 - Adding `en_AU` requires duplicating all English linguistic data even though it's identical to `en_US`, `en_GB`, `en_CA`
 - Scaling to 100+ locales multiplies duplication across dozens of language groups
 - No tree-shaking benefit—bundlers can't eliminate shared data
@@ -510,4 +510,3 @@ This enables:
 **Trade-off:**
 - Build-time tooling complexity (TypeSpec compiler + custom emitters)
 - **Offset by**: Consistency and maintainability gains at 4+ SDKs scale
-

@@ -1,6 +1,8 @@
 ---
 title: "Get Started"
 description: "Quick start guide to understanding and using Pseudata for cross-language mock data generation"
+sidebar:
+  order: 1
 head:
   - tag: script
     attrs:
@@ -39,7 +41,7 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 Pseudata is a deterministic mock data generator that produces **identical results across all programming languages**.
 
-Unlike traditional faker libraries where `seed(42)` in Python gives you different data than `seed(42)` in JavaScript, Pseudata guarantees mathematical consistency.
+Unlike traditional faker libraries where `seed(42)` in **Python** gives you different data than `seed(42)` in **JavaScript**, Pseudata guarantees mathematical consistency.
 
 ## The Core Problem
 
@@ -61,7 +63,7 @@ user = faker.name()  # → "Bob Smith"
 
 Pseudata uses the **PCG32 algorithm** (Permuted Congruential Generator) as its mathematical foundation. Unlike traditional faker libraries that rely on language-specific random number generators, PCG32 is a standardized algorithm that produces identical sequences across all implementations.
 
-This means: Given the same seed, PCG32 generates the exact same sequence of numbers in Go, Java, Python, and TypeScript. Those numbers then deterministically select names, emails, and other attributes from identical data pools.
+This means: Given the same seed, PCG32 generates the exact same sequence of numbers in **Go**, **Java**, **Python**, and **TypeScript**. Those numbers then deterministically select names, emails, and other attributes from identical data pools.
 
 **The result? Perfect cross-language consistency.**
 
@@ -165,7 +167,7 @@ This means: Given the same seed, PCG32 generates the exact same sequence of numb
 
 ## Locale Support
 
-By default, Pseudata uses the **US locale** (`en_US`, ~25KB)—140x smaller than Faker.js!
+By default, Pseudata uses the **US locale** (`en_US`).
 
 For other countries, **single-country bundles** are automatically available (e.g., `CA`, `BR`, `JP`). Or use **regional bundles** for broader coverage:
 
@@ -179,13 +181,6 @@ users := pseudata.NewUserArray(42, pseudata.WithResources(emea.Resources))
 
 [Learn more about using locales →](/guides/using-locales/)
 
-## Key Benefits
-
-- **Cross-Language Consistency** - Same seed = same data across all languages. Test frontend and backend with matching data.
-- **Infinite Scale** - O(1) instant access to any record. Generate billions without memory overhead—virtual arrays calculate on demand.
-- **Multi-Locale Support** - 15+ locales with culturally appropriate names, addresses, and geographic data.
-- **Zero Dependencies** - Pure native implementation in every language. No FFI, no bindings, just native code.
-
 ## Next Steps
 
 - **Learn why this matters:** Read the [Introduction blog post](/blog/introduction/)
@@ -196,9 +191,15 @@ users := pseudata.NewUserArray(42, pseudata.WithResources(emea.Resources))
 
 **Active development** with working implementations in:
 
-- Go
-- Java
-- Python
-- TypeScript
+- **Go**
+- **Java**
+- **Python**
+- **TypeScript**
 
-**Roadmap:** C#, Rust, Swift, Dart, PHP
+**Roadmap:**
+
+- **Dart**
+- **Rust**
+- **C#**
+- **PHP**
+- **Swift**

@@ -53,7 +53,7 @@ Choose the contribution type that matches what you want to add:
 
 ### 1. Add a New Model
 
-**What**: Define new data structures (like `Person`, `Product`, `Order`) with their corresponding virtual arrays.
+**What**: Define new data structures (like `Person`, `Product`, `Order`) with their corresponding PseudoArrays.
 
 **When to use**:
 - You need a new type of test data (e.g., `Invoice`, `Event`)
@@ -282,7 +282,7 @@ Follow language-specific documentation conventions for all public APIs:
 - **Fixture tests are mandatory**: All changes must include fixture-based tests
 - **Cross-language consistency**: Verify outputs match across all languages
 - **Edge cases**: Test boundary conditions, empty inputs, special characters
-- **Performance**: Ensure generated data is fast (O(1) for array access)
+- **Performance**: Ensure generated data is fast ($O(\log n)$ for array access)
 
 ### Commit Message Convention
 
@@ -513,4 +513,3 @@ Contributors are recognized in:
 - GitHub contributor graph
 
 Thank you for helping make Pseudata better! 🎉
-

@@ -1,7 +1,8 @@
 ---
 title: "Models"
 description: "Reference for data models and their array generators in Pseudata"
-order: 5
+sidebar:
+  order: 7
 head:
   - tag: script
     attrs:
@@ -42,7 +43,7 @@ Each model combines multiple primitive generators to create rich, structured obj
 properly related fields. For example, a User model generates consistent email addresses
 based on the person's name, and birthdate that matches the specified age range.
 
-Models are accessed through virtual arrays that provide O(1) random access to infinite
+Models are accessed through PseudoArrays that provide $O(\log n)$ random access to infinite
 objects. Each array is seeded with a world seed for deterministic generation.
 
 Each model type has a unique TypeSequence identifier used in PseudoIDs to distinguish object types.
@@ -85,7 +86,7 @@ name components, contact details, gender, locale, and profile picture.
 
 ### UserArray
 
-Virtual array providing O(1) access to infinite User objects.
+PseudoArray providing $O(\log n)$ access to infinite User objects.
 
 **Usage:**
 
@@ -121,7 +122,7 @@ Virtual array providing O(1) access to infinite User objects.
 
 **Methods:**
 
-- `at(index: int): User` - Get User at specified index (O(1) access)
+- `at(index: int): User` - Get User at specified index ($O(\log n)$ access)
 - `constructor(worldSeed: uint64)` - Create array with given world seed
 
 ---
@@ -153,7 +154,7 @@ postal code, country, and locale.
 
 ### AddressArray
 
-Virtual array providing O(1) access to infinite Address objects.
+PseudoArray providing $O(\log n)$ access to infinite Address objects.
 
 **Usage:**
 
@@ -189,8 +190,7 @@ Virtual array providing O(1) access to infinite Address objects.
 
 **Methods:**
 
-- `at(index: int): Address` - Get Address at specified index (O(1) access)
+- `at(index: int): Address` - Get Address at specified index ($O(\log n)$ access)
 - `constructor(worldSeed: uint64)` - Create array with given world seed
 
 ---
-

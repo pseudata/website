@@ -1,0 +1,223 @@
+---
+title: Glossary
+description: Complete reference of Pseudata terms, concepts, and formatting conventions
+sidebar:
+  order: 99
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Glossary",
+        "description": "Complete reference of Pseudata terms, concepts, and formatting conventions",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/reference/glossary/"
+        },
+        "keywords": ["glossary", "terminology", "pseudata", "pseudo-id", "pseudo-array", "pseudo-link"]
+      }
+---
+
+Complete reference of all Pseudata terms, concepts, and naming conventions.
+
+## Core Concepts
+
+The three fundamental building blocks of the Pseudata system.
+
+### *pseudo-array*
+
+An infinite, deterministic array that generates elements on-demand using pseudo-random algorithms. Each element is calculated when accessed, with $O(\log n)$ complexity and zero memory overhead.
+
+**Class:** `PseudoArray`  
+**Reference:** [Pseudo-Arrays](/reference/pseudo-arrays/)  
+**Example:** `const users = new UserArray(42n);`
+
+### *pseudo-id*
+
+A deterministic, sortable UUID v8 identifier that encodes three components: *world-seed*, *type-sequence*, and *index*. Unlike random UUIDs, *pseudo-ids* are reproducible and self-describing.
+
+**Class:** `PseudoID`  
+**Reference:** [Pseudo-IDs](/reference/pseudo-ids/)  
+**Format:** `xxxxxxxx-xxxx-8xxx-yxxx-xxxxxxxxxxxx`  
+**Example:** `0000002a-0000-8000-a065-00000003e8`
+
+### *pseudo-link*
+
+A coordinate system for manipulating 40-bit indices to create stateless relationships between entities. Enables $O(1)$ navigation between related indices through bitwise operations without storing connection data.
+
+**Class:** `PseudoLink`  
+**Reference:** [Pseudo-Links](/reference/pseudo-links/)  
+**Example:** `const link = new PseudoLink(17, 3);`
+
+---
+
+## Identity Components
+
+These three components uniquely identify every generated object.
+
+### *world-seed*
+
+The base seed that defines an entire "world" or universe of generated data. All *pseudo-arrays* in the same world share this seed, ensuring consistent cross-references.
+
+**Parameter:** `worldSeed`  
+**Type:** 64-bit integer  
+**Range:** 0 to $2^{64} - 1$  
+**Example:** `42n`
+**Use cases:** Environment isolation, tenant separation, test scenarios
+
+### *type-sequence*
+
+An identifier that specifies the type of object (Users, Addresses, Products, etc.). Each concrete type has a unique *type-sequence* number.
+
+**Parameter:** `typeSeq`  
+**Type:** 16-bit integer  
+**Range:** 0 to $2^{16} - 1$  
+**Common values:**
+- `101` - Users
+- `110` - Addresses
+- `120` - Products
+
+### *index*
+
+The position of an object within its type's *pseudo-array*. Represents the "creation order" within that type.
+
+**Parameter:** `index`  
+**Type:** 40-bit integer  
+**Range:** 0 to $2^{40} - 1$ (over 1.1 trillion)  
+**Example:** `1000n`
+
+---
+
+## Coordinate Components
+
+*Pseudo-links* divide the 40-bit *index* into three coordinate zones for relationship management.
+
+### *connector*
+
+Middle bits that define relationship slots. Changing only the *connector* value navigates to related indices in the same *pseudo-link* cell.
+
+**Parameter:** `connector`  
+**Default:** 3 bits (8 slots: 0-7)  
+**Configurable:** Yes, via constructor  
+**Example:** `link.resolve(index, 2)` navigates to connector slot 2
+
+### *island*
+
+Low bits used for sharding. Related indices always share the same *island* value, ensuring they hash to the same partition in distributed systems.
+
+**Parameter:** `island`  
+**Default:** 17 bits  
+**Range:** 0 to $2^{17} - 1$  
+**Purpose:** Shard determination via `index mod 2^islandBits`
+
+### *neighborhood*
+
+High bits that group related indices together. Indices with the same *neighborhood* and *island* are part of the same *pseudo-link* cell.
+
+**Parameter:** `neighborhood`  
+**Default:** 20 bits (when using 17 island + 3 connector)  
+**Range:** 0 to $2^{20} - 1$  
+**Purpose:** Defines groups of related entities
+
+---
+
+## Algorithms & Patterns
+
+### Hierarchical Seeding
+
+The pattern of combining *world-seed* and *type-sequence* to create type-specific generators, then advancing to a specific *index*.
+
+**Formula:** `Generator(worldSeed, typeSeq).Advance(index)`  
+**Benefit:** Each type gets its own deterministic random stream
+
+### PCG32
+
+Permuted Congruential Generator - the deterministic pseudo-random algorithm used for all data generation.
+
+**Full Name:** Permuted Congruential Generator  
+**Bit Output:** 32 bits per step  
+**Properties:** Fast, high-quality randomness, deterministic  
+**Reference:** [pcg-random.org](https://www.pcg-random.org/)
+
+### Stateless Generation
+
+The principle that elements are calculated on-demand from their coordinates rather than stored in memory.
+
+**Benefit:** Zero memory overhead, infinite scale, instant access to any position
+
+---
+
+## Technical Terms
+
+### Cross-Language Consistency
+
+The guarantee that the same *world-seed*, *type-sequence*, and *index* produce identical output across all supported languages (Go, Java, Python, TypeScript, etc.).
+
+**Implementation:** Standardized PCG32 algorithm and data generation rules
+
+### Deterministic
+
+Property that the same inputs always produce the same outputs. All Pseudata generation is deterministic.
+
+**Contrast:** Random/non-deterministic systems produce different results each run
+
+### Shard-Safe
+
+Property of *pseudo-links* where related indices never cross shard boundaries, enabling distributed processing without coordination.
+
+**Guarantee:** `shard(index) === shard(resolve(index, connector))` for all connector values
+
+---
+
+## Formatting Conventions
+
+Pseudata documentation uses consistent formatting to distinguish between concepts, code, and file names.
+
+### Concept Terms (in prose)
+
+Use *italic* with *hyphens* when discussing concepts:
+
+- *pseudo-array*
+- *pseudo-id*
+- *pseudo-link*
+- *world-seed*
+- *type-sequence*
+- *index*
+- *island*
+- *connector*
+- *neighborhood*
+
+**Example:** "A *pseudo-array* uses a *world-seed* to generate elements."
+
+### Class & Parameter Names (in code)
+
+Use `backticks` with `camelCase` when referring to classes or parameters:
+
+- `PseudoArray`
+- `PseudoID`
+- `PseudoLink`
+- `worldSeed`
+- `typeSeq`
+- `index`
+- `island`
+- `connector`
+- `neighborhood`
+
+**Example:** "The `PseudoArray` constructor accepts a `worldSeed` parameter."

@@ -49,7 +49,7 @@ head:
         "description": "Deterministic mock data generator that produces identical data across Go, Java, Python, and TypeScript using PCG32 algorithm",
         "featureList": [
           "Cross-language consistency",
-          "O(1) infinite scale",
+          "O(log n) infinite scale",
           "Compositional locale architecture",
           "Zero dependencies"
         ],
@@ -72,22 +72,22 @@ Pseudata solves this by making mock data generation a standardized algorithm—n
 
 <CardGrid>
   <Card title="Cross-Language Consistency" icon="approve-check">
-    Same seed = same data across all languages. No more integration test mismatches.
+    Same seed = same data across all languages. No more integration test mismatches. [Learn more →](/reference/concept/#cross-language-consistency)
   </Card>
   <Card title="Infinite Scale" icon="rocket">
-    O(1) instant access to billions of records. Zero memory overhead—virtual arrays calculate on demand.
+    $O(\log n)$ instant access to billions of records with zero memory overhead. [Learn more →](/reference/pseudo-arrays/)
+  </Card>
+  <Card title="Stateless Relations" icon="puzzle">
+    Create deterministic relationships without a database. Navigate entities in $O(1)$ time. [Learn more →](/guides/using-relations/)
   </Card>
   <Card title="Smart Locale Loading" icon="translate">
-    Minimal default, scale globally. Compositional architecture with zero duplication—load only what you need.
-  </Card>
-  <Card title="Zero Dependencies" icon="puzzle">
-    Pure implementation in every language. No FFI, no bindings, just native code.
+    Minimal default, scale globally. Load only the specific regions and data you need. [Learn more →](/guides/using-locales)
   </Card>
 </CardGrid>
 
 ## Same Seed, Same Data—At Any Scale
 
-**Pseudata is the only faker library that guarantees both cross-language consistency and O(1) infinite scale.**
+**Pseudata is the only faker library that guarantees both cross-language consistency and $O(\log n)$ infinite scale.**
 
 <Tabs>
   <TabItem label="❌ Traditional Fakers">
@@ -135,7 +135,7 @@ const user = users.at(0);
 console.log(user.name); // → "John Smith"
 ```
 
-**Direct access to any index - O(1)**
+**Direct access to any index - $O(\log n)$**
 
 ```python
 # Jump directly to the billionth record
@@ -150,7 +150,7 @@ user = users.at(1_000_000_000)  # Instant
 
 **Cross-Language Consistency** enables reliable integration testing across polyglot systems. When your Go backend and TypeScript frontend both generate `User[1000]` with seed `42`, you get the same test data—eliminating the integration test mismatches that plague microservices architectures.
 
-**Direct O(1) Access** unlocks scenarios impossible with traditional fakers:
+**Direct $O(\log n)$ Access** unlocks scenarios impossible with traditional fakers:
 
 - **Load testing** - Each test worker accesses its own range (worker 1 uses indices 0-999, worker 2 uses 1000-1999) without coordination
 - **Parallel processing** - Split a billion-record dataset across processes instantly, no sequential generation required
@@ -213,6 +213,98 @@ user = users.at(1_000_000_000)  # Instant
 
   </TabItem>
 </Tabs>
+
+## Stateless Relationships
+
+**Navigate complex data graphs in $O(1)$ time without requiring a database.**
+
+Traditional mock data is "flat"—users and groups have no inherent connection unless you manually link them. *Pseudo links* use a bit-coordinate system to bake relationships directly into the IDs themselves.
+
+![Stateless Relationships Diagram](/images/stateless-relationships.svg)
+
+<Tabs>
+  <TabItem label="Concept">
+
+**Relational data that exists mathematically**
+
+By treating a 40-bit index as a coordinate (*island*, *neighborhood*, and *connector*), you can instantly calculate the ID of a related entity.
+- **Zero Lookups:** No database queries or cache hits required.
+- **Bidirectional:** If User A is in Group B, Group B "knows" it contains User A through the same shared bit pattern.
+- **Stateless:** The relationship is defined by deterministic logic, not by stored state.
+- **Shard-Aware:** The *island* component ensures related entities hash to the same partition in distributed systems, keeping relationships co-located.
+
+</TabItem>
+
+  <TabItem label="Go">
+    ```go
+    import "github.com/pseudata/pseudata"
+
+    users := pseudata.NewUserArray(42)
+    groups := pseudata.NewGroupArray(42)
+    link := pseudata.NewPseudoLink(17, 3)
+
+    // Alice in neighborhood 1000
+    aliceIdx := link.Encode(1, 1000, 0)
+    alice := users.At(aliceIdx)
+
+    // Find Alice's group (same coordinates, different entity type)
+    groupIdx := link.Resolve(aliceIdx, 0)
+    group := groups.At(groupIdx)
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    import dev.pseudata.GroupArray;
+    import dev.pseudata.PseudoLink;
+
+    UserArray users = new UserArray(42);
+    GroupArray groups = new GroupArray(42);
+    PseudoLink link = new PseudoLink(17, 3);
+
+    long aliceIdx = link.encode(1, 1000, 0);
+    User alice = users.at(aliceIdx);
+
+    long groupIdx = link.resolve(aliceIdx, 0);
+    Group group = groups.at(groupIdx);
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray, GroupArray, PseudoLink
+
+    users = UserArray(42)
+    groups = GroupArray(42)
+    link = PseudoLink(17, 3)
+
+    alice_idx = link.encode(1, 1000, 0)
+    alice = users.at(alice_idx)
+
+    group_idx = link.resolve(alice_idx, 0)
+    group = groups.at(group_idx)
+    ```
+  </TabItem>
+  
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray, GroupArray, PseudoLink } from '@pseudata/core';
+
+    const users = new UserArray(42n);
+    const groups = new GroupArray(42n);
+    const link = new PseudoLink(17, 3);
+
+    const aliceIdx = link.encode(1, 1000, 0);
+    const alice = users.at(aliceIdx);
+
+    const groupIdx = link.resolve(aliceIdx, 0);
+    const group = groups.at(groupIdx);
+    ```
+  </TabItem>
+</Tabs>
+
+[Learn more about Stateless Relations →](/guides/using-relations/)
 
 ## Built for Global Scale
 

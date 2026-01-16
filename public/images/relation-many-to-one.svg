@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 320" width="600" height="320">
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#7cb3d9" />
+    </marker>
+  </defs>
+
+  <!-- Other users (faded to show Many concept) -->
+  <rect x="20" y="10" width="140" height="50" rx="8" fill="#e1f5ff" stroke="#7cb3d9" stroke-width="1" opacity="0.4"/>
+  <text x="90" y="25" font-family="sans-serif" font-size="12" fill="#1a5490" text-anchor="middle" font-weight="bold" opacity="0.4">User</text>
+  <text x="90" y="40" font-family="sans-serif" font-size="9" fill="#1a5490" text-anchor="middle" font-style="italic" opacity="0.4">(User)</text>
+  <text x="90" y="52" font-family="sans-serif" font-size="10" fill="#1a5490" text-anchor="middle" opacity="0.4">Index: ...</text>
+  <line x1="160" y1="35" x2="420" y2="155" stroke="#7cb3d9" stroke-width="1" opacity="0.3" marker-end="url(#arrowhead)"/>
+
+  <rect x="20" y="75" width="140" height="50" rx="8" fill="#e1f5ff" stroke="#7cb3d9" stroke-width="1" opacity="0.4"/>
+  <text x="90" y="90" font-family="sans-serif" font-size="12" fill="#1a5490" text-anchor="middle" font-weight="bold" opacity="0.4">User</text>
+  <text x="90" y="105" font-family="sans-serif" font-size="9" fill="#1a5490" text-anchor="middle" font-style="italic" opacity="0.4">(User)</text>
+  <text x="90" y="117" font-family="sans-serif" font-size="10" fill="#1a5490" text-anchor="middle" opacity="0.4">Index: ...</text>
+  <line x1="160" y1="100" x2="420" y2="160" stroke="#7cb3d9" stroke-width="1" opacity="0.3" marker-end="url(#arrowhead)"/>
+
+  <!-- Alice (highlighted example) -->
+  <rect x="20" y="135" width="140" height="60" rx="8" fill="#e1f5ff" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="90" y="155" font-family="sans-serif" font-size="14" fill="#1a5490" text-anchor="middle" font-weight="bold">Alice</text>
+  <text x="90" y="173" font-family="sans-serif" font-size="10" fill="#1a5490" text-anchor="middle" font-style="italic">(User)</text>
+  <text x="90" y="187" font-family="sans-serif" font-size="11" fill="#1a5490" text-anchor="middle">Index: 1000</text>
+  <line x1="160" y1="165" x2="420" y2="165" stroke="#7cb3d9" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- More users (faded) -->
+  <rect x="20" y="210" width="140" height="50" rx="8" fill="#e1f5ff" stroke="#7cb3d9" stroke-width="1" opacity="0.4"/>
+  <text x="90" y="225" font-family="sans-serif" font-size="12" fill="#1a5490" text-anchor="middle" font-weight="bold" opacity="0.4">User</text>
+  <text x="90" y="240" font-family="sans-serif" font-size="9" fill="#1a5490" text-anchor="middle" font-style="italic" opacity="0.4">(User)</text>
+  <text x="90" y="252" font-family="sans-serif" font-size="10" fill="#1a5490" text-anchor="middle" opacity="0.4">Index: ...</text>
+  <line x1="160" y1="235" x2="420" y2="170" stroke="#7cb3d9" stroke-width="1" opacity="0.3" marker-end="url(#arrowhead)"/>
+
+  <rect x="20" y="270" width="140" height="50" rx="8" fill="#e1f5ff" stroke="#7cb3d9" stroke-width="1" opacity="0.4"/>
+  <text x="90" y="285" font-family="sans-serif" font-size="12" fill="#1a5490" text-anchor="middle" font-weight="bold" opacity="0.4">User</text>
+  <text x="90" y="300" font-family="sans-serif" font-size="9" fill="#1a5490" text-anchor="middle" font-style="italic" opacity="0.4">(User)</text>
+  <text x="90" y="312" font-family="sans-serif" font-size="10" fill="#1a5490" text-anchor="middle" opacity="0.4">Index: ...</text>
+  <line x1="160" y1="295" x2="420" y2="175" stroke="#7cb3d9" stroke-width="1" opacity="0.3" marker-end="url(#arrowhead)"/>
+
+  <!-- Primary Group (single destination, ordinal 0) -->
+  <rect x="420" y="130" width="160" height="70" rx="8" fill="#fff3e0" stroke="#ff9800" stroke-width="2"/>
+  <text x="500" y="155" font-family="sans-serif" font-size="14" fill="#e65100" text-anchor="middle" font-weight="bold">Primary Group</text>
+  <text x="500" y="173" font-family="sans-serif" font-size="10" fill="#e65100" text-anchor="middle" font-style="italic">(Group)</text>
+  <text x="500" y="187" font-family="sans-serif" font-size="11" fill="#e65100" text-anchor="middle">Connector: 0</text>
+</svg>

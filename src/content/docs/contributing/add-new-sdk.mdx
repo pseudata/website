@@ -46,7 +46,7 @@ Much of the code is generated automatically from TypeSpec definitions. Your main
 1. **Generator** - PCG32 random number generator
 2. **SeedFrom** - String to seed conversion
 3. **TypeSpec Emitters** - Code generation for your language
-4. **PseudoArray** - Virtual array base class
+4. **PseudoArray** - PseudoArray base class
 5. **ID Utils** - UUID encoding/decoding
 6. **Primitives** - ~75 data generation methods
 7. **Models** - Auto-generated via quicktype
@@ -170,7 +170,7 @@ Components should be implemented in order, as later components depend on earlier
    ├─ interface-emitter.js    (generates Primitives interface)
    └─ array-emitter.js        (generates array classes)
    ↓
-4. PseudoArray                - Virtual array wrapper
+4. PseudoArray                - PseudoArray wrapper
    ↓
 5. ID Utils                   - UUID encoding/decoding
    ↓
@@ -433,7 +433,6 @@ pub static AVAILABLE_LOCALES: &[&str] = &[
     "es_MX",
     "fr_CA",
     "fr_FR",
-    "hi_IN",
     "hu_HU",
     "ja_JP",
     "pt_BR",
@@ -831,16 +830,16 @@ cargo check
 
 ---
 
-## Step 4: PseudoArray (Virtual Array Base Class)
+## Step 4: PseudoArray (PseudoArray Base Class)
 
-**What**: Generic virtual array that generates elements on-demand via a generator function.
+**What**: Generic PseudoArray that generates elements on-demand via a generator function.
 
 **Reference**:
 
 - Go: `pseudo_array.go`
 - TypeScript: `sdks/typescript/src/pseudo-array.ts`
 
-**Core Concept**: O(1) random access without storing elements.
+**Core Concept**: $O(\log n)$ random access without storing elements.
 
 **Example Implementation** (Rust):
 
@@ -898,7 +897,7 @@ impl UserArray {
 **Reference**:
 
 - Go: `id_utils.go`
-- Documentation: [PseudoID](/reference/pseudoid/)
+- Documentation: [PseudoID](/reference/pseudo-ids/)
 
 **Bit Layout** (128-bit UUID v8):
 
@@ -1638,7 +1637,7 @@ Update these files to include your language:
 - [ ] **Generator**: PCG32 implementation with fixture tests
 - [ ] **SeedFrom**: FNV-1a hash with fixture tests
 - [ ] **ID Utils**: Encode/decode with fixture tests
-- [ ] **PseudoArray**: Generic virtual array base class
+- [ ] **PseudoArray**: Generic PseudoArray base class
 - [ ] **Primitives**: Interface + implementation + fixture tests
 - [ ] **Models**: User, Address data structures (auto-generated via quicktype)
 - [ ] **Arrays**: UserArray + AddressArray + fixture tests

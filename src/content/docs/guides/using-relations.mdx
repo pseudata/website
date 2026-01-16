@@ -1,0 +1,535 @@
+---
+title: Using Relations
+description: Learn how to create deterministic, stateless relationships between entities in Pseudata.
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Using Relations",
+        "description": "Learn how to create deterministic, stateless relationships between entities in Pseudata.",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/guides/using-relations/"
+        },
+        "keywords": ["stateless relations", "pseudo link", "PseudoLink", "deterministic relationships", "mock data", "testing", "coordinate system"]
+      }
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+In traditional testing, relating two entities (like a User and their Post) usually requires a database or a shared state. In Pseudata, relationships are **stateless**—calculated mathematically using a coordinate system called a *pseudo link*.
+
+## The Mental Model
+
+A *pseudo-link* treats a 40-bit index as a three-part coordinate: *island*, *neighborhood*, and *connector*. Entities with the same *island* and *neighborhood* are related. By changing only the *connector* value, you navigate to different related entities—no database required.
+
+**How it works:**
+- **Island**: Low bits used for sharding (keeps related entities on the same shard)
+- **Neighborhood**: High bits that group related entities together
+- **Connector**: Middle bits that define relationship slots (default: 3 bits = 8 slots)
+
+All relationships exist through shared bit patterns. The `resolve()` function performs bitwise operations to navigate between related indices in $O(1)$ time.
+
+## Linking Two Entities
+
+The simplest use case is linking two entities, such as a User and their Address.
+
+<Tabs>
+  <TabItem label="Concept">
+    ![Linking Two Entities Diagram](/images/relation-linking-two.svg)
+
+    - Start with any index (e.g., a user's index)
+    - Use `.resolve()` with the same index on a different entity array
+    - The same index resolves to related entities across different types
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    import "github.com/pseudata/pseudata"
+
+    const worldSeed = int64(42)
+
+    users := pseudata.NewUserArray(worldSeed)
+    addresses := pseudata.NewAddressArray(worldSeed)
+    link := pseudata.NewPseudoLink(17, 3)
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    aliceIdx := link.Encode(1, 1000, 0)
+    alice := users.At(aliceIdx)
+    
+    // Find Alice's primary address at connector 0 (same I:1, N:1000)
+    addressIdx := link.Resolve(aliceIdx, 0)
+    address := addresses.At(addressIdx)
+    ```
+  </TabItem>
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    import dev.pseudata.PseudoLink;
+
+    final long WORLD_SEED = 42L;
+
+    UserArray users = new UserArray(WORLD_SEED);
+    AddressArray addresses = new AddressArray(WORLD_SEED);
+    PseudoLink link = new PseudoLink(17, 3);
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    long aliceIdx = link.encode(1, 1000, 0);
+    User alice = users.at(aliceIdx);
+
+    long addressIdx = link.resolve(aliceIdx, 0);
+    Address address = addresses.at(addressIdx);
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray, PseudoLink
+
+    WORLD_SEED = 42
+
+    users = UserArray(WORLD_SEED)
+    addresses = AddressArray(WORLD_SEED)
+    link = PseudoLink(17, 3)
+
+    # Alice at explicit coordinates (I:1, N:1000, C:0)
+    alice_idx = link.encode(1, 1000, 0)
+    alice = users.at(alice_idx)
+
+    address_idx = link.resolve(alice_idx, 0)
+    address = addresses.at(address_idx)
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray, PseudoLink } from '@pseudata/core';
+
+    const WORLD_SEED = 42n;
+
+    const users = new UserArray(WORLD_SEED);
+    const addresses = new AddressArray(WORLD_SEED);
+    const link = new PseudoLink(17, 3);
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    const aliceIdx = link.encode(1, 1000, 0);
+    const alice = users.at(aliceIdx);
+
+    const addressIdx = link.resolve(aliceIdx, 0);
+    const address = addresses.at(addressIdx);
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## One-to-Many
+
+If you have a user's index, you can find all groups they belong to by iterating through the available connector slots.
+
+<Tabs>
+  <TabItem label="Concept">
+    ![One-to-Many Relationship Diagram](/images/relation-one-to-many.svg)
+
+    Given a user's index, iterate through connectors to find all groups they belong to.
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    import "github.com/pseudata/pseudata"
+
+    const worldSeed = int64(42)
+
+    users := pseudata.NewUserArray(worldSeed)
+    groups := pseudata.NewGroupArray(worldSeed)
+    link := pseudata.NewPseudoLink(17, 3)
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    aliceIdx := link.Encode(1, 1000, 0)
+    alice := users.At(aliceIdx)
+    
+    // Find all groups Alice belongs to (iterate through all connector slots)
+    userGroups := []Group{}
+    for slot := 0; slot <= link.MaxConnector(); slot++ {
+        groupIdx := link.Resolve(aliceIdx, slot)
+        userGroups = append(userGroups, groups.At(groupIdx))
+    }
+    ```
+  </TabItem>
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    import dev.pseudata.PseudoLink;
+
+    final long WORLD_SEED = 42L;
+
+    UserArray users = new UserArray(WORLD_SEED);
+    GroupArray groups = new GroupArray(WORLD_SEED);
+    PseudoLink link = new PseudoLink(17, 3);
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    long aliceIdx = link.encode(1, 1000, 0);
+    User alice = users.at(aliceIdx);
+    List<Group> userGroups = new ArrayList<>();
+
+    for (int slot = 0; slot <= link.maxConnector(); slot++) {
+        long groupIdx = link.resolve(aliceIdx, slot);
+        userGroups.add(groups.at(groupIdx));
+    }
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray, PseudoLink
+
+    WORLD_SEED = 42
+
+    users = UserArray(WORLD_SEED)
+    groups = GroupArray(WORLD_SEED)
+    link = PseudoLink(17, 3)
+
+    # Alice at explicit coordinates (I:1, N:1000, C:0)
+    alice_idx = link.encode(1, 1000, 0)
+    alice = users.at(alice_idx)
+    
+    # Find all groups Alice belongs to
+    user_groups = [
+        groups.at(link.resolve(alice_idx, slot))
+        for slot in range(0, link.max_connector() + 1)
+    ]
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray, PseudoLink } from '@pseudata/core';
+
+    const WORLD_SEED = 42n;
+
+    const users = new UserArray(WORLD_SEED);
+    const groups = new GroupArray(WORLD_SEED);
+    const link = new PseudoLink(17, 3);
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    const aliceIdx = link.encode(1, 1000, 0);
+    const alice = users.at(aliceIdx);
+
+    const userGroups = Array.from({ length: link.maxConnector() + 1 }, (_, i) => {
+        const groupIdx = link.resolve(aliceIdx, i);
+        return groups.at(groupIdx);
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## Many-to-One
+
+Given a user's index, you can find their primary group by resolving to a specific connector.
+
+<Tabs>
+  <TabItem label="Concept">
+    ![Many-to-One Relationship Diagram](/images/relation-many-to-one.svg)
+
+    Use a specific connector (e.g., connector 0) to consistently represent the primary group.
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    import "github.com/pseudata/pseudata"
+
+    const worldSeed = int64(42)
+
+    users := pseudata.NewUserArray(worldSeed)
+    groups := pseudata.NewGroupArray(worldSeed)
+    link := pseudata.NewPseudoLink(17, 3)
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    aliceIdx := link.Encode(1, 1000, 0)
+    alice := users.At(aliceIdx)
+
+    // Find Alice's primary group (connector 0)
+    primaryGroupIdx := link.Resolve(aliceIdx, 0)
+    primaryGroup := groups.At(primaryGroupIdx)
+    ```
+  </TabItem>
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    import dev.pseudata.PseudoLink;
+
+    final long WORLD_SEED = 42L;
+
+    UserArray users = new UserArray(WORLD_SEED);
+    GroupArray groups = new GroupArray(WORLD_SEED);
+    PseudoLink link = new PseudoLink(17, 3);
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    long aliceIdx = link.encode(1, 1000, 0);
+    User alice = users.at(aliceIdx);
+
+    long primaryGroupIdx = link.resolve(aliceIdx, 0);
+    Group primaryGroup = groups.at(primaryGroupIdx);
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray, PseudoLink
+
+    WORLD_SEED = 42
+
+    users = UserArray(WORLD_SEED)
+    groups = GroupArray(WORLD_SEED)
+    link = PseudoLink(17, 3)
+
+    # Alice at explicit coordinates (I:1, N:1000, C:0)
+    alice_idx = link.encode(1, 1000, 0)
+    alice = users.at(alice_idx)
+    
+    primary_group_idx = link.resolve(alice_idx, 0)
+    primary_group = groups.at(primary_group_idx)
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray, PseudoLink } from '@pseudata/core';
+
+    const WORLD_SEED = 42n;
+
+    const users = new UserArray(WORLD_SEED);
+    const groups = new GroupArray(WORLD_SEED);
+    const link = new PseudoLink(17, 3);
+
+    // Alice at explicit coordinates (I:1, N:1000, C:0)
+    const aliceIdx = link.encode(1, 1000, 0);
+    const alice = users.at(aliceIdx);
+
+    const primaryGroupIdx = link.resolve(aliceIdx, 0);
+    const primaryGroup = groups.at(primaryGroupIdx);
+    ```
+  </TabItem>
+</Tabs>
+
+## Same-Entity Relationships
+
+You can create relationships between entities of the same type by using `encode()` to construct indices with different *neighborhood* values. By keeping the same *island*, relationships remain shard-safe while avoiding the automatic many-to-many coupling that occurs within a single *neighborhood*.
+
+<Tabs>
+  <TabItem label="Concept">
+    ![Same-Entity Relationship Diagram](/images/relation-same-entity.svg)
+
+    Use `encode()` to place entities in different *neighborhoods* but the same *island*. This creates a controlled relationship (like linking different entity types) while maintaining shard safety. Alice at (I:1, N:1000) can have her mentor Bob at (I:1, N:2000).
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    import "github.com/pseudata/pseudata"
+
+    const worldSeed = int64(42)
+
+    users := pseudata.NewUserArray(worldSeed)
+    link := pseudata.NewPseudoLink(17, 3)
+
+    // Place Alice in neighborhood 1000
+    aliceIdx := link.Encode(1, 1000, 0)
+    alice := users.At(aliceIdx)
+
+    // Place her mentor (Bob) in a different neighborhood (shard-safe, same island)
+    mentorIdx := link.Encode(1, 2000, 0)
+    mentor := users.At(mentorIdx)
+    ```
+  </TabItem>
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    import dev.pseudata.PseudoLink;
+
+    final long WORLD_SEED = 42L;
+
+    UserArray users = new UserArray(WORLD_SEED);
+    PseudoLink link = new PseudoLink(17, 3);
+
+    // Place Alice in neighborhood 1000
+    long aliceIdx = link.encode(1, 1000, 0);
+    User alice = users.at(aliceIdx);
+
+    // Place her mentor (Bob) in a different neighborhood (shard-safe, same island)
+    long mentorIdx = link.encode(1, 2000, 0);
+    User mentor = users.at(mentorIdx);
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray, PseudoLink
+
+    WORLD_SEED = 42
+
+    users = UserArray(WORLD_SEED)
+    link = PseudoLink(17, 3)
+
+    # Place Alice in neighborhood 1000
+    alice_idx = link.encode(1, 1000, 0)
+    alice = users.at(alice_idx)
+
+    # Place her mentor (Bob) in a different neighborhood (shard-safe, same island)
+    mentor_idx = link.encode(1, 2000, 0)
+    mentor = users.at(mentor_idx)
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray, PseudoLink } from '@pseudata/core';
+
+    const WORLD_SEED = 42n;
+
+    const users = new UserArray(WORLD_SEED);
+    const link = new PseudoLink(17, 3);
+
+    // Place Alice in neighborhood 1000
+    const aliceIdx = link.encode(1, 1000, 0);
+    const alice = users.at(aliceIdx);
+
+    // Place her mentor (Bob) in a different neighborhood (shard-safe, same island)
+    const mentorIdx = link.encode(1, 2000, 0);
+    const mentor = users.at(mentorIdx);
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## Bidirectional Navigation
+
+When entities are in different *neighborhoods* but the same *island*, you can establish bidirectional relationships by constructing indices for both directions. The relationship is explicit and controlled, similar to foreign keys, while remaining shard-safe.
+
+<Tabs>
+  <TabItem label="Concept">
+    ![Bidirectional Relationship Diagram](/images/relation-bidirectional.svg)
+
+    Alice and Bob are in different *neighborhoods* but share the same *island* for shard safety. To navigate bidirectionally, store or construct both indices using coordinate conventions (e.g., mentees in N:1000-1999, mentors in N:2000-2999).
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    import "github.com/pseudata/pseudata"
+
+    const worldSeed = int64(42)
+
+    users := pseudata.NewUserArray(worldSeed)
+    link := pseudata.NewPseudoLink(17, 3)
+
+    // Alice in neighborhood 1000
+    aliceIdx := link.Encode(1, 1000, 0)
+    alice := users.At(aliceIdx)
+
+    // Bob (mentor) in neighborhood 2000
+    mentorIdx := link.Encode(1, 2000, 0)
+    mentor := users.At(mentorIdx)
+
+    // Navigate BACK: Given mentor's index, construct mentee's index
+    // Using convention: mentee = N:1000, mentor = N:2000
+    menteeIdx := link.Encode(1, 1000, 0)  // Same as aliceIdx
+    mentee := users.At(menteeIdx)
+
+    fmt.Printf("Bidirectional: %s's mentor is %s\n", alice.Name, mentor.Name)
+    fmt.Printf("And %s's mentee is %s\n", mentor.Name, mentee.Name)
+    ```
+  </TabItem>
+  <TabItem label="Java">
+    ```java
+    import dev.pseudata.UserArray;
+    import dev.pseudata.PseudoLink;
+
+    final long WORLD_SEED = 42L;
+
+    UserArray users = new UserArray(WORLD_SEED);
+    PseudoLink link = new PseudoLink(17, 3);
+
+    // Alice in neighborhood 1000
+    long aliceIdx = link.encode(1, 1000, 0);
+    User alice = users.at(aliceIdx);
+
+    // Bob (mentor) in neighborhood 2000
+    long mentorIdx = link.encode(1, 2000, 0);
+    User mentor = users.at(mentorIdx);
+
+    // Navigate BACK: Given mentor's index, construct mentee's index
+    // Using convention: mentee = N:1000, mentor = N:2000
+    long menteeIdx = link.encode(1, 1000, 0);  // Same as aliceIdx
+    User mentee = users.at(menteeIdx);
+
+    System.out.printf("Bidirectional: %s's mentor is %s%n", alice.getName(), mentor.getName());
+    System.out.printf("And %s's mentee is %s%n", mentor.getName(), mentee.getName());
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from pseudata import UserArray, PseudoLink
+
+    WORLD_SEED = 42
+
+    users = UserArray(WORLD_SEED)
+    link = PseudoLink(17, 3)
+
+    # Alice in neighborhood 1000
+    alice_idx = link.encode(1, 1000, 0)
+    alice = users.at(alice_idx)
+
+    # Bob (mentor) in neighborhood 2000
+    mentor_idx = link.encode(1, 2000, 0)
+    mentor = users.at(mentor_idx)
+
+    # Navigate BACK: Given mentor's index, construct mentee's index
+    # Using convention: mentee = N:1000, mentor = N:2000
+    mentee_idx = link.encode(1, 1000, 0)  # Same as alice_idx
+    mentee = users.at(mentee_idx)
+
+    print(f"Bidirectional: {alice.name}'s mentor is {mentor.name}")
+    print(f"And {mentor.name}'s mentee is {mentee.name}")
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UserArray, PseudoLink } from '@pseudata/core';
+
+    const WORLD_SEED = 42n;
+
+    const users = new UserArray(WORLD_SEED);
+    const link = new PseudoLink(17, 3);
+
+    // Alice in neighborhood 1000
+    const aliceIdx = link.encode(1, 1000, 0);
+    const alice = users.at(aliceIdx);
+
+    // Bob (mentor) in neighborhood 2000
+    const mentorIdx = link.encode(1, 2000, 0);
+    const mentor = users.at(mentorIdx);
+
+    // Navigate BACK: Given mentor's index, construct mentee's index
+    // Using convention: mentee = N:1000, mentor = N:2000
+    const menteeIdx = link.encode(1, 1000, 0);  // Same as aliceIdx
+    const mentee = users.at(menteeIdx);
+
+    console.log(`Bidirectional: ${alice.name}'s mentor is ${mentor.name}`);
+    console.log(`And ${mentor.name}'s mentee is ${mentee.name}`);
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## Next Steps
+
+- **[Pseudo-Link Reference](/reference/pseudo-links/)** – Dive deep into bit-math, masks, and custom coordinate layouts.
+- **[Pseudo-ID Reference](/reference/pseudo-ids/)** – Learn how these indices are encoded into standard UUIDs.

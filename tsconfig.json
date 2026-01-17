@@ -6,7 +6,7 @@
       "@components/*": ["src/components/*"],
       "@content/*": ["src/content/*"],
       "@examples/*": ["src/examples/*"]
-    },
-    "exclude": ["node_modules", "dist", "src/examples"]
-  }
+    }
+  },
+  "exclude": ["node_modules", "dist", "src/examples"]
 }

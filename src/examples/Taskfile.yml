@@ -1,0 +1,89 @@
+version: "3"
+
+output: prefixed
+
+vars:
+  RELATIVE_DIR:
+    sh: realpath --relative-to="{{.TASKFILE_DIR}}" "{{.USER_WORKING_DIR}}"
+  ARG:
+    sh: |
+      if [ -n "{{.CLI_ARGS}}" ]; then 
+        echo "{{.CLI_ARGS}}"
+      elif [ -n "{{.RELATIVE_DIR}}" ] && [ "{{.RELATIVE_DIR}}" != "." ]; then 
+        echo "{{.RELATIVE_DIR}}"
+      fi
+
+tasks:
+  default:
+    desc: List available commands
+    silent: true
+    cmd: task --list
+
+  check-args:
+    desc: Check if directory argument is provided
+    internal: true
+    silent: true
+    preconditions:
+      - sh: '[ -n "{{.ARG}}" ]'
+        msg: "Error: Please provide a directory path as an argument. (Usage: task your-task -- path)"
+
+  dir:
+    desc: "Run example in specified directory (Usage: task dir -- path)"
+    silent: true
+    deps: [check-args, go, java, python, typescript]
+
+  step:
+    internal: true
+    silent: true
+    prefix: "{{.ITEM}}"
+    cmd: task dir -- "{{.ITEM}}"
+
+  all:
+    desc: "Run all examples"
+    silent: true
+    prefix: "{{.ITEM}} "
+    vars:
+      DIRS:
+        sh: find . -name main.go -exec dirname {} \; | cut -c 3-
+    cmds:
+      - for: { var: DIRS }
+        task: step
+        vars: { ITEM: "{{.ITEM}}" }
+
+  go:
+    desc: "Run Go example (Usage: task go -- path)"
+    silent: true
+    deps: [check-args]
+    dir: "{{.ARG}}"
+    cmds:
+      - go run .
+
+  java:
+    desc: "Run Java example (Usage: task java -- path)"
+    silent: true
+    deps: [check-args]
+    vars:
+      JAR_PATH:
+        sh: find $HOME/.m2/repository/dev/pseudata/pseudata -name "*.jar" | head -n 1
+    env:
+      CLASSPATH: ".:{{.JAR_PATH}}"
+    dir: "{{.ARG}}"
+    cmds:
+      - javac Main.java
+      - java Main
+
+  python:
+    desc: "Run Python example (Usage: task python -- path)"
+    silent: true
+    deps: [check-args]
+    dir: "{{.ARG}}"
+    cmds:
+      - uv run --quiet main.py
+
+  typescript:
+    desc: "Run TypeScript example (Usage: task typescript -- path)"
+    silent: true
+    deps: [check-args]
+    dir: "{{.ARG}}"
+    cmds:
+      - bun main.ts

@@ -2,6 +2,7 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import path from "path";
 
 // https://astro.build/config
 export default defineConfig({
@@ -170,5 +171,12 @@ export default defineConfig({
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeKatex],
+  },
+  vite: {
+    resolve: {
+      alias: {
+        "@examples": path.resolve("/src/examples"),
+      },
+    },
   },
 });

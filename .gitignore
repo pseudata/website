@@ -29,3 +29,14 @@ pnpm-debug.log*
 
 # TypeSpec output
 tsp-output/
+
+# Task
+.task/
+
+# Local backup
+RCS
+**/*,v
+
+# Java artifacts
+*.class
+*.jar

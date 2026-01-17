@@ -1,0 +1,6 @@
+[project]
+name = "pseudata-website-examples"
+version = "0.0.1"
+description = "Examples for pseudata"
+requires-python = ">=3.8"
+dependencies = ["pseudata>=0.0.1"]

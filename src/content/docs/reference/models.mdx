@@ -43,7 +43,7 @@ Each model combines multiple primitive generators to create rich, structured obj
 properly related fields. For example, a User model generates consistent email addresses
 based on the person's name, and birthdate that matches the specified age range.
 
-Models are accessed through PseudoArrays that provide $O(\log n)$ random access to infinite
+Models are accessed through pseudo-arrays that provide $O(\log n)$ random access to infinite
 objects. Each array is seeded with a world seed for deterministic generation.
 
 Each model type has a unique TypeSequence identifier used in PseudoIDs to distinguish object types.
@@ -61,7 +61,7 @@ name components, contact details, gender, locale, and profile picture.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | `string` | Deterministic, sortable PseudoID for this user object. |
+| `id` | `string` | Deterministic, sortable pseudo-id for this user object. |
 | `sub` | `string` | Subject identifier - a unique identifier for the user. |
 | `name` | `string` | Full name in displayable form including all name parts. |
 | `given_name` | `string` | Given name(s) or first name(s). |
@@ -86,7 +86,7 @@ name components, contact details, gender, locale, and profile picture.
 
 ### UserArray
 
-PseudoArray providing $O(\log n)$ access to infinite User objects.
+pseudo-array providing $O(\log n)$ access to infinite User objects.
 
 **Usage:**
 
@@ -154,7 +154,7 @@ postal code, country, and locale.
 
 ### AddressArray
 
-PseudoArray providing $O(\log n)$ access to infinite Address objects.
+pseudo-array providing $O(\log n)$ access to infinite Address objects.
 
 **Usage:**
 
@@ -194,3 +194,67 @@ PseudoArray providing $O(\log n)$ access to infinite Address objects.
 - `constructor(worldSeed: uint64)` - Create array with given world seed
 
 ---
+
+## Group
+
+Group object representing a simple named group.
+
+Used to model collections of users, teams, or other entities with a single group name.
+The group name is generated as a deterministic, human-friendly nickname.
+
+This model is intentionally minimal, but can be extended to include additional group attributes as needed.
+
+**TypeSequence:** `102`
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Deterministic, sortable pseudo-id for this group object. |
+| `name` | `string` | Deterministic, human-friendly group name. |
+
+---
+
+### GroupArray
+
+pseudo-array providing $O(\log n)$ access to infinite Group objects.
+
+**Usage:**
+
+<Tabs>
+  <TabItem label="Go">
+    ```go
+    groups := NewGroupArray(worldSeed)
+    group := groups.At(index)
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    GroupArray groups = new GroupArray(worldSeed);
+    Group group = groups.at(index);
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    groups = GroupArray(world_seed)
+    group = groups.at(index)
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    const groups = new GroupArray(worldSeed);
+    const group = groups.at(index);
+    ```
+  </TabItem>
+</Tabs>
+
+**Methods:**
+
+- `at(index: int): Group` - Get Group at specified index ($O(\log n)$ access)
+- `constructor(worldSeed: uint64)` - Create array with given world seed
+
+---
+

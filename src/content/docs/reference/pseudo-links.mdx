@@ -55,13 +55,13 @@ A *pseudo-link* divides a **40-bit Index** into three configurable zones:
 
 **Configurable Bit Layout:**
 
-* **Island (Low bits):** Configurable width (**default: 17 bits**). These bits determine sharding - they remain unchanged during relationship calculations, ensuring related indices always hash to the same partition.
-* **Connector (Middle bits):** Configurable width (**default: 3 bits**). This is the "slot" that gets modified to navigate between related indices. With 3 bits, you get 8 possible relationships per neighborhood.
-* **Neighborhood (High bits):** Remaining bits (**default: 20 bits** when using 17 island + 3 connector). Indices sharing the same neighborhood and island bits are considered related.
+* **Connector (Low bits, bits 0-2):** Configurable width (**default: 3 bits**). This is the "slot" that gets modified to navigate between related indices. With 3 bits, you get 8 possible relationships per neighborhood.
+* **Neighborhood (Middle bits, bits 3-22):** Remaining bits (**default: 20 bits** when using 17 island + 3 connector). Indices sharing the same neighborhood and island bits are considered related.
+* **Island (High bits, bits 23-39):** Configurable width (**default: 17 bits**). These bits determine sharding - they remain unchanged during relationship calculations, ensuring related indices always hash to the same partition.
 
 **The bit layout is configurable.** You choose `islandBits` and `connectorBits` in the constructor. The remaining bits become the neighborhood. Choose your layout based on your requirements: more connector bits = more relationships per neighborhood, more island bits = finer sharding granularity.
 
-**Why this bit order?** Island occupies the low bits to enable simple modulo operations for sharding ($index \bmod 2^{islandBits}$). Connector sits in the middle for clean bit manipulation without affecting the island. Neighborhood uses the high bits, following the common pattern of hierarchical grouping where high-order bits represent broader categorization.
+**Why this bit order?** Island occupies the high bits to enable simple range-based sharding ($index \gg (40 - islandBits)$ or $\lfloor index / 2^{23} \rfloor$). This creates contiguous shard ranges: shard 0 contains indices [0, $2^{23}$), shard 1 contains [$2^{23}$, $2 \times 2^{23}$), etc. Connector sits on the low bits for efficient bit manipulation. Neighborhood uses the middle bits, grouping related entities together while preserving the island value.
 
 Relationships are calculated by performing **bitwise operations** on the connector bits. The `resolve()` function replaces the connector segment with a new value, generating a related index that shares the same neighborhood and island bits.
 
@@ -174,10 +174,9 @@ class PseudoLink {
         this.connectorBits = BigInt(connectorBits);
         this.neighborhoodBits = 40n - this.islandBits - this.connectorBits;
         
-        this.shift = this.islandBits;
         this.connectorMask = (1n << this.connectorBits) - 1n;
-        this.islandMask = (1n << this.islandBits) - 1n;
         this.neighborhoodMask = (1n << this.neighborhoodBits) - 1n;
+        this.islandMask = (1n << this.islandBits) - 1n;
         
         this._maxIsland = (1 << islandBits) - 1;
         this._maxConnector = (1 << connectorBits) - 1;
@@ -204,11 +203,11 @@ class PseudoLink {
             throw new Error(`Neighborhood ${neighborhood} out of bounds (0-${this._maxNeighborhood}).`);
         }
 
-        const islandPart = BigInt(island) & this.islandMask;
-        const connectorPart = (BigInt(connector) & this.connectorMask) << this.shift;
-        const neighborhoodPart = (BigInt(neighborhood) & this.neighborhoodMask) << (this.shift + this.connectorBits);
+        const connectorPart = BigInt(connector) & this.connectorMask;
+        const neighborhoodPart = (BigInt(neighborhood) & this.neighborhoodMask) << this.connectorBits;
+        const islandPart = (BigInt(island) & this.islandMask) << (this.connectorBits + this.neighborhoodBits);
         
-        return neighborhoodPart | connectorPart | islandPart;
+        return islandPart | neighborhoodPart | connectorPart;
     }
 
     /**
@@ -219,9 +218,9 @@ class PseudoLink {
     public decode(index: bigint | number): LinkComponents {
         const bigIndex = BigInt(index) & this.indexLimit;
         
-        const island = Number(bigIndex & this.islandMask);
-        const connector = Number((bigIndex >> this.shift) & this.connectorMask);
-        const neighborhood = Number((bigIndex >> (this.shift + this.connectorBits)) & this.neighborhoodMask);
+        const connector = Number(bigIndex & this.connectorMask);
+        const neighborhood = Number((bigIndex >> this.connectorBits) & this.neighborhoodMask);
+        const island = Number((bigIndex >> (this.connectorBits + this.neighborhoodBits)) & this.islandMask);
         
         return { island, neighborhood, connector };
     }
@@ -239,8 +238,8 @@ class PseudoLink {
         const bigIndex = BigInt(sourceIndex) & this.indexLimit;
         
         // Clear the connector window and inject the new connector value
-        const clearedBase = bigIndex & ~(this.connectorMask << this.shift);
-        return clearedBase | (BigInt(connector) << this.shift);
+        const clearedBase = bigIndex & ~this.connectorMask;
+        return clearedBase | BigInt(connector);
     }
 
     /**
@@ -883,29 +882,29 @@ This section details the bitwise mechanics that guarantee $O(1)$ performance and
 **Key Principle**: *Pseudo-links* perform pure bit manipulation on valid 40-bit integers. There is no special "encoding" - the functions simply read and write specific bit positions. Any 40-bit value (0 to 2^40-1) is valid input and produces valid output. The "relationship" exists because related indices share specific bit patterns (neighborhood and island bits).
 
 ### The Transformation Function
-Let an index $Idx$ be defined as the concatenation of three bit-segments: Neighborhood ($N$), Connector ($C$), and Island ($I$).
+Let an index $Idx$ be defined as the concatenation of three bit-segments: Island ($I$), Neighborhood ($N$), and Connector ($C$).
 
-$Idx = N || C || I$
+$Idx = I || N || C$
 
 The *pseudo-link* resolution function $f(Idx, k)$ treats the index as three segments and produces a new index by replacing the Connector segment $C$ with a target value $k$. This is pure bit manipulation - reading and writing specific bit positions.
 
-$f(Idx, k) = N || k || I$
+$f(Idx, k) = I || N || k$
 
 ### Symmetry Proof
-Since $N$ and $I$ are preserved during the transformation, any two indices $Idx_1$ and $Idx_2$ are part of the same *pseudo-link* cell if and only if their Neighborhood and Island segments match:
+Since $I$ and $N$ are preserved during the transformation, any two indices $Idx_1$ and $Idx_2$ are part of the same *pseudo-link* cell if and only if their Island and Neighborhood segments match:
 
-$N_1 = N_2$ and $I_1 = I_2$
+$I_1 = I_2$ and $N_1 = N_2$
 
 This creates a **Complete Graph** $K_N$ within every neighborhood, where $N = 2^{connectorBits}$. All entities in the same *pseudo-link* cell are related to each other.
 
 ### Sharding Invariance
-Distributed systems often shard data using a modulo operation on the ID. In a *pseudo-link*, given $islandBits = 17$:
+Distributed systems often shard data by extracting the high-order bits. In a *pseudo-link*, given $islandBits = 17$:
 
-$ShardID = Idx \bmod 2^{17}$
+$ShardID = \lfloor Idx / 2^{23} \rfloor = Idx \gg 23$
 
-Because the resolution function $f(Idx, k)$ only modifies bits at positions $\ge 17$, the lower 17 bits are invariant:
+Because the resolution function $f(Idx, k)$ only modifies bits at positions $< 23$ (the Connector and Neighborhood bits), the upper 17 bits (Island) are invariant:
 
-$ShardID(Idx) \equiv ShardID(f(Idx, k))$
+$ShardID(Idx) = ShardID(f(Idx, k))$
 
 <Aside type="caution">
 A relationship calculated via *pseudo-links* will **never** cross a shard boundary. This allows workers to operate in "Shared-Nothing" mode, scaling linearly without inter-node communication.

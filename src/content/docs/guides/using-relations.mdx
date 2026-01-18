@@ -42,9 +42,9 @@ In traditional testing, relating two entities (like a User and their Post) usual
 A *pseudo-link* treats a 40-bit index as a three-part coordinate: *island*, *neighborhood*, and *connector*. Entities with the same *island* and *neighborhood* are related. By changing only the *connector* value, you navigate to different related entities—no database required.
 
 **How it works:**
-- **Island**: Low bits used for sharding (keeps related entities on the same shard)
-- **Neighborhood**: High bits that group related entities together
-- **Connector**: Middle bits that define relationship slots (default: 3 bits = 8 slots)
+- **Island**: High bits used for sharding (keeps related entities on the same shard)
+- **Neighborhood**: Middle bits that group related entities together
+- **Connector**: Low bits that define relationship slots (default: 3 bits = 8 slots)
 
 All relationships exist through shared bit patterns. The `resolve()` function performs bitwise operations to navigate between related indices in $O(1)$ time.
 

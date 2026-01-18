@@ -111,30 +111,30 @@ The position of an object within its type's *pseudo-array*. Represents the "crea
 
 ### *connector*
 
-Middle bits that define relationship slots. Changing only the *connector* value navigates to related indices in the same *pseudo-link* cell.
+Low bits (bits 0-2 by default) that define relationship slots. Changing only the *connector* value navigates to related indices in the same *pseudo-link* cell.
 
 **Parameter:** `connector`  
 **Default:** 3 bits (8 slots: 0-7)  
 **Configurable:** Yes, via constructor  
 **Example:** `link.resolve(index, 2)` navigates to connector slot 2
 
-### *island*
-
-Low bits used for sharding. Related indices always share the same *island* value, ensuring they hash to the same partition in distributed systems.
-
-**Parameter:** `island`  
-**Default:** 17 bits  
-**Range:** 0 to $2^{17} - 1$  
-**Purpose:** Shard determination via `index mod 2^islandBits`
-
 ### *neighborhood*
 
-High bits that group related indices together. Indices with the same *neighborhood* and *island* are part of the same *pseudo-link* cell.
+Middle bits (bits 3-22 by default) that group related indices together. Indices with the same *neighborhood* and *island* are part of the same *pseudo-link* cell.
 
 **Parameter:** `neighborhood`  
 **Default:** 20 bits (when using 17 island + 3 connector)  
 **Range:** 0 to $2^{20} - 1$  
 **Purpose:** Defines groups of related entities
+
+### *island*
+
+High bits (bits 23-39 by default) used for sharding. Related indices always share the same *island* value, ensuring they hash to the same partition in distributed systems.
+
+**Parameter:** `island`  
+**Default:** 17 bits  
+**Range:** 0 to $2^{17} - 1$  
+**Purpose:** Shard determination via `index >> (40 - islandBits)` or `⌊index / 2^23⌋`
 
 ---
 

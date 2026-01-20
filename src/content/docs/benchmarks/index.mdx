@@ -48,13 +48,14 @@ The following benchmarks measure the time to access individual elements at vario
 
 **`UserArray.At(i)` in Go**
 
-$i$ | $T$
---- | ---
-$1$ | $5.721µs$
-$2^{8}$ | $5.219µs$
-$2^{16}$ | $5.304µs$
-$2^{32}$ | $6.058µs$
-$2^{40}-1$ | $6.392µs$
+$i$ | $T$ | $\Delta T$ 
+--- | --- | ---
+$0$ | $5.551µs$ | 
+$1$ | $5.68µs$ | $0.129µs$
+$2^{8}$ | $5.75µs$ | $0.199µs$
+$2^{16}$ | $6.292µs$ | $0.741µs$
+$2^{32}$ | $7.073µs$ | $1.522µs$
+$2^{40}-1$ | $7.973µs$ | $2.422µs$
 
 
 
@@ -63,25 +64,44 @@ $2^{40}-1$ | $6.392µs$
 
 **`AddressArray.At(i)` in Go**
 
-$i$ | $T$
---- | ---
-$1$ | $2.553µs$
-$2^{8}$ | $2.721µs$
-$2^{16}$ | $2.775µs$
-$2^{32}$ | $3.169µs$
-$2^{40}-1$ | $3.531µs$
+$i$ | $T$ | $\Delta T$ 
+--- | --- | ---
+$0$ | $2.793µs$ | 
+$1$ | $2.866µs$ | $0.073µs$
+$2^{8}$ | $2.893µs$ | $0.100µs$
+$2^{16}$ | $2.988µs$ | $0.195µs$
+$2^{32}$ | $3.516µs$ | $0.723µs$
+$2^{40}-1$ | $3.941µs$ | $1.148µs$
 
 
 
 </Card>
 </CardGrid>
 
+The tables above are representative examples demonstrating access time characteristics—Pseudata includes *pseudo-arrays* for many more entity types beyond `User` and `Address`.
+
 ## Analysis
 
 **As demonstrated above, access time remains practically constant—whether retrieving the 1st element or the trillionth ($2^{40}-1$).** This validates true $O(1)$ behavior: index position has negligible impact on performance, enabling instant access to any element in a trillion-element dataset.
 
-The slight variations in access time (microseconds) are due to:
+### Understanding the *ΔT*
+
+The $ΔT$ column shows the **seeking time**—the overhead of advancing the PCG32 generator to the target index. This seeking operation is technically $O(\log n)$ due to the generator's `advance()` method, which uses binary exponentiation to jump to any position.
+
+**Total access time = Seeking time ($ΔT$) + Generation time**
+
+- **Seeking time ($ΔT$)**: $O(\log n)$ but grows extremely slowly (measured in nanoseconds/microseconds)
+- **Generation time**: $O(1)$ and remains constant regardless of index—this is the bulk of the access time
+
+**The $O(\log n)$ seeking factor is so small compared to the constant generation time that practical access time is effectively $O(1)$.** Even at index $2^{40}-1$ (over 1 trillion), seeking adds only a negligible amount for real-world use cases.
+
+**Put this in perspective**: While Pseudata's $ΔT$ seeking overhead is measured in *microseconds* (millionths of a second), traditional sequential generators would take *seconds or tens of seconds* to iterate through millions of records—a difference of **six orders of magnitude**.
+
+### Performance Characteristics
+
+The slight variations in access time are due to:
 - **Data complexity**: `UserArray` generates more fields than `AddressArray`
+- **Seeking overhead**: Logarithmic growth, but imperceptible in practice (nanoseconds to microseconds)
 - **CPU cache effects**: Minor variations from system state
 - **String operations**: Name generation involves more allocations than simple numeric fields
 

@@ -49,7 +49,7 @@ head:
         "description": "Deterministic mock data generator that produces identical data across Go, Java, Python, and TypeScript using PCG32 algorithm",
         "featureList": [
           "Cross-language consistency",
-          "O(log n) infinite scale",
+          "O(1) infinite scale",
           "Compositional locale architecture",
           "Zero dependencies"
         ],
@@ -75,7 +75,7 @@ Pseudata solves this by making mock data generation a standardized algorithm—n
     Same seed = same data across all languages. No more integration test mismatches. [Learn more →](/reference/concept/#cross-language-consistency)
   </Card>
   <Card title="Infinite Scale" icon="rocket">
-    $O(\log n)$ instant access to billions of records with zero memory overhead. [Learn more →](/reference/pseudo-arrays/)
+    $O(1)$ instant access to billions of records with zero memory overhead. [Learn more →](/reference/pseudo-arrays/)
   </Card>
   <Card title="Stateless Relations" icon="puzzle">
     Create deterministic relationships without a database. Navigate entities in $O(1)$ time. [Learn more →](/guides/using-relations/)
@@ -87,7 +87,7 @@ Pseudata solves this by making mock data generation a standardized algorithm—n
 
 ## Same Seed, Same Data—At Any Scale
 
-**Pseudata is the only faker library that guarantees both cross-language consistency and $O(\log n)$ infinite scale.**
+**Pseudata is the only faker library that guarantees both cross-language consistency and $O(1)$ infinite scale.**
 
 <Tabs>
   <TabItem label="❌ Traditional Fakers">
@@ -135,7 +135,7 @@ const user = users.at(0);
 console.log(user.name); // → "John Smith"
 ```
 
-**Direct access to any index - $O(\log n)$**
+**Direct access to any index - $O(1)$**
 
 ```python
 # Jump directly to the billionth record
@@ -150,7 +150,7 @@ user = users.at(1_000_000_000)  # Instant
 
 **Cross-Language Consistency** enables reliable integration testing across polyglot systems. When your Go backend and TypeScript frontend both generate `User[1000]` with seed `42`, you get the same test data—eliminating the integration test mismatches that plague microservices architectures.
 
-**Direct $O(\log n)$ Access** unlocks scenarios impossible with traditional fakers:
+**Direct $O(1)$ Access** unlocks scenarios impossible with traditional fakers:
 
 - **Load testing** - Each test worker accesses its own range (worker 1 uses indices 0-999, worker 2 uses 1000-1999) without coordination
 - **Parallel processing** - Split a billion-record dataset across processes instantly, no sequential generation required

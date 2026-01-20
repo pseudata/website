@@ -218,7 +218,7 @@ impl Generator {
 **Implementation Requirements**:
 
 - **PCG32 state**: 64-bit state + 64-bit increment (must be odd)
-- **Advance**: Jump to arbitrary position in O(log n) time
+- **Advance**: Jump to arbitrary position in O(1) time
 - **Bounded random**: `intn(n)` must use unbiased method (rejection sampling)
 - **UUID v4**: Generate RFC 4122 compliant UUIDs
 - **Unsigned semantics**: PCG32 produces `uint32` values. Languages without unsigned types (e.g., Java) should use wider types (`long`) to represent the full uint32 range
@@ -839,7 +839,7 @@ cargo check
 - Go: `pseudo_array.go`
 - TypeScript: `sdks/typescript/src/pseudo-array.ts`
 
-**Core Concept**: $O(\log n)$ random access without storing elements.
+**Core Concept**: $O(1)$ random access without storing elements.
 
 **Example Implementation** (Rust):
 

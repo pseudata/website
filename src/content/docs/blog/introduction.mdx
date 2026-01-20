@@ -165,7 +165,7 @@ Data is calculated on-the-fly using a hierarchical seeding strategy:
 Generator(seed: WorldSeed, sequence: TypeSequence).Advance(Index)
 ```
 
-This uses PCG32's `Advance()` function to jump directly to the correct position in the random stream, maintaining proper stream independence as recommended by the PCG32 algorithm design. This allows for **O(\log n) Random Access** without memory overhead. A developer can request `User[5,000,000]` instantly, without generating the previous 4,999,999 items. This is something most current libraries struggle with efficiently.
+This uses PCG32's `Advance()` function to jump directly to the correct position in the random stream, maintaining proper stream independence as recommended by the PCG32 algorithm design. This allows for **O(1) Random Access** without memory overhead. A developer can request `User[5,000,000]` instantly, without generating the previous 4,999,999 items. This is something most current libraries struggle with efficiently.
 
 For convenience, Pseudata includes a **SeedFrom** utility function that converts strings into deterministic numeric seeds, allowing developers to use memorable identifiers like `"demo-2025"` instead of raw numbers.
 

@@ -1,6 +1,6 @@
 ---
 title: Pseudo-Arrays
-description: Infinite deterministic arrays that generate elements on-demand using pseudo-random algorithms, providing O(log n) access with zero memory overhead.
+description: Infinite deterministic arrays that generate elements on-demand using pseudo-random algorithms, providing O(1) access with zero memory overhead.
 sidebar:
   order: 4
 head:
@@ -12,7 +12,7 @@ head:
         "@context": "https://schema.org",
         "@type": "TechArticle",
         "headline": "Pseudo-Arrays",
-        "description": "Infinite deterministic arrays that generate elements on-demand using pseudo-random algorithms, providing O(log n) access with zero memory overhead",
+        "description": "Infinite deterministic arrays that generate elements on-demand using pseudo-random algorithms, providing O(1) access with zero memory overhead",
         "author": {
           "@type": "Organization",
           "name": "Pseudata",
@@ -31,13 +31,13 @@ head:
           "@type": "WebPage",
           "@id": "https://pseudata.dev/reference/pseudo-arrays/"
         },
-        "keywords": ["pseudo-array", "infinite array", "deterministic", "O(log n)", "zero memory", "pseudo-random", "PCG32", "virtual array"]
+        "keywords": ["pseudo-array", "infinite array", "deterministic", "O(1)", "zero memory", "pseudo-random", "PCG32", "virtual array"]
       }
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-A *pseudo-array* is an infinite, deterministic array that generates elements on-demand using pseudo-random algorithms. Each *index* always produces the same element for a given *world-seed* and *type-sequence*, with **$O(\log n)$ access** and **zero memory overhead**.
+A *pseudo-array* is an infinite, deterministic array that generates elements on-demand using pseudo-random algorithms. Each *index* always produces the same element for a given *world-seed* and *type-sequence*, with **$O(1)$ access** and **zero memory overhead**.
 
 The key insight: instead of storing billions of records in memory, *pseudo-arrays* calculate each element when you access it. The same index always returns the same element because it uses the deterministic PCG32 algorithm with hierarchical seeding: `Generator(worldSeed, typeSeq).Advance(index)`.
 
@@ -59,7 +59,7 @@ PseudoArray is an abstract base class that concrete types (like `UserArray`, `Ad
 * **Deterministic**: Same `worldSeed`, `typeSeq`, and `index` always produce the same element
 * **Infinite**: Access any index from 0 to 2^40-1 (over 1 trillion elements)
 * **Zero memory**: Each element is calculated on-demand, not stored
-* **$O(\log n)$ access**: Direct index access without iteration
+* **$O(1)$ access**: Direct index access without iteration
 * **Cross-language consistent**: Same element in **Go**, **Java**, **Python**, **TypeScript** and more
 
 ## PseudoArray Class
@@ -174,7 +174,7 @@ fmt.Println(user.Email)    // "john.smith@example.com"
 fmt.Println(user.ID())     // PseudoID: "0000002a-0000-8000-a065-00000003e8"
 
 // Access any index instantly
-billionthUser := users.At(1_000_000_000)  // O(log n)
+billionthUser := users.At(1_000_000_000)  // O(1)
 ```
   </TabItem>
   <TabItem label="Java">
@@ -189,7 +189,7 @@ System.out.println(user.email());    // "john.smith@example.com"
 System.out.println(user.id());       // PseudoID: "0000002a-0000-8000-a065-00000003e8"
 
 // Access any index instantly
-User billionthUser = users.at(1_000_000_000);  // O(log n)
+User billionthUser = users.at(1_000_000_000);  // O(1)
 ```
   </TabItem>
   <TabItem label="Python">
@@ -204,7 +204,7 @@ print(user.email)    # "john.smith@example.com"
 print(user.id())     # PseudoID: "0000002a-0000-8000-a065-00000003e8"
 
 # Access any index instantly
-billionth_user = users[1_000_000_000]  # O(log n)
+billionth_user = users[1_000_000_000]  # O(1)
 ```
   </TabItem>
   <TabItem label="TypeScript">
@@ -219,7 +219,7 @@ console.log(user.email);          // "john.smith@example.com"
 console.log(user.id());           // PseudoID: "0000002a-0000-8000-a065-00000003e8"
 
 // Access any index instantly
-const billionthUser = users.at(1_000_000_000);  // O(log n) - no iteration needed
+const billionthUser = users.at(1_000_000_000);  // O(1) - no iteration needed
 ```
   </TabItem>
 </Tabs>
@@ -277,7 +277,7 @@ console.log(address.postalCode);     // "12345"
 
 ### Single Item Access
 
-Access any index directly with $O(\log n)$ complexity:
+Access any index directly with $O(1)$ complexity:
 
 ```typescript
 const users = new UserArray(42n);

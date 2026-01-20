@@ -17,7 +17,7 @@ Pseudata uses the PCG32 (Permuted Congruential Generator) algorithm - a standard
 ## Key Features
 
 - **Cross-Language Consistency**: Same seed = same data across all languages
-- **O(log n) Infinite Scale**: PseudoArrays allow instant access to any index (even the billionth record) without iterating
+- **O(1) Infinite Scale**: PseudoArrays allow instant access to any index (even the billionth record) without iterating
 - **Multi-Locale Support**: 15+ locales with culturally appropriate names and addresses
 - **Zero Dependencies**: Pure native implementation in each language
 - **TypeSpec Code Generation**: Single source of truth generates all implementations

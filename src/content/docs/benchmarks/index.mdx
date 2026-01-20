@@ -1,0 +1,142 @@
+---
+title: "Benchmarks"
+description: Performance benchmarks demonstrating O(1) constant-time access to pseudo-arrays regardless of index position
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Benchmarks",
+        "description": "Performance benchmarks demonstrating O(1) constant-time access to pseudo-arrays regardless of index position",
+        "author": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pseudata",
+          "url": "https://pseudata.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://pseudata.dev/logo-light.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://pseudata.dev/benchmarks/"
+        }
+      }
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+Pseudata's *pseudo-arrays* provide **constant-time access** to any element, regardless of its position in the sequence. Unlike traditional arrays that must allocate memory or sequential generators that must iterate through all previous elements, *pseudo-arrays* compute each element independently in $O(1)$ time.
+
+This page demonstrates real-world performance characteristics across different array types and access patterns.
+
+## Access Times
+
+The following benchmarks measure the time to access individual elements at various positions, from the first element to the trillionth ($2^{40}-1$). All tests were performed on an average laptop.
+
+<CardGrid>
+
+<Card title="UserArray">
+
+**`UserArray.At(i)` in Go**
+
+$i$ | $T$
+--- | ---
+$1$ | $5.721µs$
+$2^{8}$ | $5.219µs$
+$2^{16}$ | $5.304µs$
+$2^{32}$ | $6.058µs$
+$2^{40}-1$ | $6.392µs$
+
+
+
+</Card>
+<Card title="AddressArray">
+
+**`AddressArray.At(i)` in Go**
+
+$i$ | $T$
+--- | ---
+$1$ | $2.553µs$
+$2^{8}$ | $2.721µs$
+$2^{16}$ | $2.775µs$
+$2^{32}$ | $3.169µs$
+$2^{40}-1$ | $3.531µs$
+
+
+
+</Card>
+</CardGrid>
+
+## Analysis
+
+**As demonstrated above, access time remains practically constant—whether retrieving the 1st element or the trillionth ($2^{40}-1$).** This validates true $O(1)$ behavior: index position has negligible impact on performance, enabling instant access to any element in a trillion-element dataset.
+
+The slight variations in access time (microseconds) are due to:
+- **Data complexity**: `UserArray` generates more fields than `AddressArray`
+- **CPU cache effects**: Minor variations from system state
+- **String operations**: Name generation involves more allocations than simple numeric fields
+
+### Key Takeaways
+
+- **No memory overhead**: Accessing element 1 trillion requires the same memory as accessing element 1
+- **No sequential dependency**: Jump directly to any index without computing intermediate values
+- **Predictable performance**: Access time is determined by entity complexity, not position
+- **Scalable testing**: Load test with billions of records without infrastructure costs
+
+## Methodology
+
+All benchmarks use Go's standard `testing.B` benchmark framework with the following settings:
+
+- **Iterations**: Automatically determined by Go benchmark runner for statistical significance
+- **Warmup**: Initial iterations excluded from timing
+- **System**: Standard development laptop (no dedicated benchmark hardware)
+- **Isolation**: Each benchmark runs independently
+
+## Comparison
+
+To understand the practical impact of $O(1)$ access, consider how Pseudata compares to traditional data generation approaches.
+
+### Sequential Generators
+
+Traditional faker libraries must iterate through all previous elements:
+
+```python
+# To access element 1,000,000 with traditional faker
+faker.seed(42)
+for i in range(1_000_000):  # Must iterate O(n)
+    user = faker.person()
+```
+
+With Pseudata:
+
+```python
+# Direct access - O(1)
+users = UserArray(42)
+user = users.at(1_000_000)  # Instant O(1) access
+```
+
+### Memory-Based Arrays
+
+Pre-allocated arrays require memory proportional to size:
+
+```python
+# Traditional array for 1 million users
+users = [generate_user(i) for i in range(1_000_000)] # High memory usage
+```
+
+With Pseudata:
+
+```python
+# Pseudo-array for 1 trillion users
+users = UserArray(42)
+user = users.at(1_000_000_000_000)  # No memory overhead
+```

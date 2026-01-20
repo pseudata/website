@@ -148,6 +148,10 @@ export default defineConfig({
           autogenerate: { directory: "guides" },
         },
         {
+          label: "Benchmarks",
+          link: "/benchmarks",
+        },
+        {
           label: "Reference",
           autogenerate: { directory: "reference" },
         },

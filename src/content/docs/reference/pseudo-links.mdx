@@ -55,11 +55,11 @@ A *pseudo-link* divides a **40-bit Index** into three configurable zones:
 
 **Configurable Bit Layout:**
 
-* **Connector (Low bits, bits 0-2):** Configurable width (**default: 3 bits**). This is the "slot" that gets modified to navigate between related indices. With 3 bits, you get 8 possible relationships per neighborhood.
-* **Neighborhood (Middle bits, bits 3-22):** Remaining bits (**default: 20 bits** when using 17 island + 3 connector). Indices sharing the same neighborhood and island bits are considered related.
-* **Island (High bits, bits 23-39):** Configurable width (**default: 17 bits**). These bits determine sharding - they remain unchanged during relationship calculations, ensuring related indices always hash to the same partition.
+* **Island (High bits, bits 23-39):** Configurable width (**default: 17 bits**). You specify this in the constructor. These bits determine sharding - they remain unchanged during relationship calculations, ensuring related indices always hash to the same partition.
+* **Neighborhood (Middle bits, bits 3-22):** Configurable width (**default: 20 bits**). You specify this in the constructor. Indices sharing the same neighborhood and island bits are considered related.
+* **Connector (Low bits, bits 0-2):** Calculated automatically as remaining bits (**default: 3 bits** = 40 - 17 island - 20 neighborhood). This is the "slot" that gets modified to navigate between related indices. With 3 bits, you get 8 possible relationships per neighborhood.
 
-**The bit layout is configurable.** You choose `islandBits` and `connectorBits` in the constructor. The remaining bits become the neighborhood. Choose your layout based on your requirements: more connector bits = more relationships per neighborhood, more island bits = finer sharding granularity.
+**The bit layout is configurable.** You choose `islandBits` and `neighborhoodBits` in the constructor. The remaining bits (40 - islandBits - neighborhoodBits) automatically become the connector. Choose your layout based on your requirements: more connector bits = more relationships per neighborhood, more island bits = finer sharding granularity.
 
 **Why this bit order?** Island occupies the high bits to enable simple range-based sharding ($index \gg (40 - islandBits)$ or $\lfloor index / 2^{23} \rfloor$). This creates contiguous shard ranges: shard 0 contains indices [0, $2^{23}$), shard 1 contains [$2^{23}$, $2 \times 2^{23}$), etc. Connector sits on the low bits for efficient bit manipulation. Neighborhood uses the middle bits, grouping related entities together while preserving the island value.
 

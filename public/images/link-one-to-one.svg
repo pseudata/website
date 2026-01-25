@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 150" width="400" height="150">
+  <!-- UserLink -->
+  <rect x="20" y="55" width="120" height="40" rx="8" fill="#e1f5ff" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="80" y="80" font-family="sans-serif" font-size="14" fill="#1a5490" text-anchor="middle" font-weight="bold">UserLink</text>
+
+  <!-- Arrows -->
+  <defs>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#66bb6a" />
+    </marker>
+  </defs>
+
+  <!-- Arrow to home address -->
+  <line x1="140" y1="65" x2="240" y2="35" stroke="#66bb6a" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <!-- Arrow to work address -->
+  <line x1="140" y1="85" x2="240" y2="115" stroke="#66bb6a" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <!-- Home Address -->
+  <rect x="240" y="10" width="140" height="40" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="2"/>
+  <text x="310" y="28" font-family="sans-serif" font-size="14" fill="#2e7d32" text-anchor="middle" font-weight="bold">Address</text>
+  <text x="310" y="42" font-family="sans-serif" font-size="10" fill="#2e7d32" text-anchor="middle">homeAddress()</text>
+
+  <!-- Work Address -->
+  <rect x="240" y="100" width="140" height="40" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="2"/>
+  <text x="310" y="118" font-family="sans-serif" font-size="14" fill="#2e7d32" text-anchor="middle" font-weight="bold">Address</text>
+  <text x="310" y="132" font-family="sans-serif" font-size="10" fill="#2e7d32" text-anchor="middle">workAddress()</text>
+</svg>

@@ -1,35 +1,6 @@
 ---
 title: "Benchmarks"
 description: Performance benchmarks demonstrating O(1) constant-time access to pseudo-arrays regardless of index position
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": "Benchmarks",
-        "description": "Performance benchmarks demonstrating O(1) constant-time access to pseudo-arrays regardless of index position",
-        "author": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/benchmarks/"
-        }
-      }
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
@@ -50,12 +21,12 @@ The following benchmarks measure the time to access individual elements at vario
 
 $i$ | $T$ | $\Delta T$ 
 --- | --- | ---
-$0$ | $5.551µs$ | 
-$1$ | $5.68µs$ | $0.129µs$
-$2^{8}$ | $5.75µs$ | $0.199µs$
-$2^{16}$ | $6.292µs$ | $0.741µs$
-$2^{32}$ | $7.073µs$ | $1.522µs$
-$2^{40}-1$ | $7.973µs$ | $2.422µs$
+$0$ | $5.551\mu s$ | 
+$1$ | $5.68\mu s$ | $0.129\mu s$
+$2^{8}$ | $5.75\mu s$ | $0.199\mu s$
+$2^{16}$ | $6.292\mu s$ | $0.741\mu s$
+$2^{32}$ | $7.073\mu s$ | $1.522\mu s$
+$2^{40}-1$ | $7.973\mu s$ | $2.422\mu s$
 
 
 
@@ -66,12 +37,12 @@ $2^{40}-1$ | $7.973µs$ | $2.422µs$
 
 $i$ | $T$ | $\Delta T$ 
 --- | --- | ---
-$0$ | $2.793µs$ | 
-$1$ | $2.866µs$ | $0.073µs$
-$2^{8}$ | $2.893µs$ | $0.100µs$
-$2^{16}$ | $2.988µs$ | $0.195µs$
-$2^{32}$ | $3.516µs$ | $0.723µs$
-$2^{40}-1$ | $3.941µs$ | $1.148µs$
+$0$ | $2.793\mu s$ | 
+$1$ | $2.866\mu s$ | $0.073\mu s$
+$2^{8}$ | $2.893\mu s$ | $0.100\mu s$
+$2^{16}$ | $2.988\mu s$ | $0.195\mu s$
+$2^{32}$ | $3.516\mu s$ | $0.723\mu s$
+$2^{40}-1$ | $3.941\mu s$ | $1.148\mu s$
 
 
 

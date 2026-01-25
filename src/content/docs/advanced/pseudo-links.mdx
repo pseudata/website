@@ -3,43 +3,13 @@ title: Pseudo-Links
 description: A coordinate system for manipulating 40-bit indices to create stateless relationships through shared bit patterns.
 sidebar:
   order: 5
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": "Pseudo-Links",
-        "description": "A coordinate system for manipulating 40-bit indices to create stateless relationships through shared bit patterns",
-        "author": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/reference/pseudo-links/"
-        },
-        "keywords": ["PseudoLink", "pseudo link", "coordinate system", "stateless relationships", "bit manipulation", "O(1)", "deterministic", "sharding"]
-      }
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 A *pseudo-link* allows you to interpret any 40-bit index as a **stateless, $O(1)$ relation** between a set of related entities. This means you can establish relationships between entities without storing any connection data - the relationship exists purely through shared bit patterns.
 
-The key insight: by treating an index as structured coordinates (neighborhood, connector, island) rather than a scalar value, you can instantly navigate between related indices through simple bitwise operations. The indices can point to items in the same PseudoArray (same object type) or different arrays (like users and groups). When working with [Pseudo-IDs](/reference/pseudo-ids/), a *pseudo-link* operates on the 40-bit *index* component, while the *world-seed* and *type-sequence* remain unchanged.
+The key insight: by treating an index as structured coordinates (neighborhood, connector, island) rather than a scalar value, you can instantly navigate between related indices through simple bitwise operations. The indices can point to items in the same PseudoArray (same object type) or different arrays (like users and groups). When working with [Pseudo-IDs](/advanced/pseudo-ids/), a *pseudo-link* operates on the 40-bit *index* component, while the *world-seed* and *type-sequence* remain unchanged.
 
 In traditional systems, determining relationships requires database lookups or junction tables. With *pseudo-links*, you manipulate bits to calculate related indices - no database needed, no special encoding required. Any 40-bit value is valid; *pseudo-links* provide bitwise operations to construct, modify, and navigate through indices as if they were coordinates in a multi-dimensional space.
 
@@ -64,6 +34,8 @@ A *pseudo-link* divides a **40-bit Index** into three configurable zones:
 **Why this bit order?** Island occupies the high bits to enable simple range-based sharding ($index \gg (40 - islandBits)$ or $\lfloor index / 2^{23} \rfloor$). This creates contiguous shard ranges: shard 0 contains indices [0, $2^{23}$), shard 1 contains [$2^{23}$, $2 \times 2^{23}$), etc. Connector sits on the low bits for efficient bit manipulation. Neighborhood uses the middle bits, grouping related entities together while preserving the island value.
 
 Relationships are calculated by performing **bitwise operations** on the connector bits. The `resolve()` function replaces the connector segment with a new value, generating a related index that shares the same neighborhood and island bits.
+
+**For self-referencing relationships** (where a model links to itself), use `resolveWithTeleport()` instead of `resolve()` to prevent entities from referencing themselves by XORing the neighborhood bits. See [Same-Entity Relationships](#same-entity-relationships) below.
 
 ## PseudoLink Class
 
@@ -92,11 +64,11 @@ interface LinkComponents {
 declare class PseudoLink {
     /**
      * @param islandBits - Number of bits used for sharding (default: 17).
-     * @param connectorBits - Number of bits for relationship slots (default: 3).
-     * The remaining bits (40 - islandBits - connectorBits) become the neighborhood.
+     * @param neighborhoodBits - Number of bits for grouping (default: 20).
+     * The remaining bits (40 - islandBits - neighborhoodBits) become the connector.
      * Choose your layout based on requirements: more connectorBits = more relationships.
      */
-    constructor(islandBits: number, connectorBits: number);
+    constructor(islandBits: number, neighborhoodBits: number);
 
     /**
      * Constructs a 40-bit index from coordinate components.
@@ -121,6 +93,17 @@ declare class PseudoLink {
      * @returns A related index sharing the same neighborhood and island bits.
      */
     public resolve(sourceIndex: bigint | number, connector: number): bigint;
+
+    /**
+     * Resolves a relationship with neighborhood teleportation.
+     * Prevents self-references by XORing the neighborhood bits.
+     * 
+     * @param sourceIndex - Source 40-bit index value.
+     * @param connector - The target connector value (0 to maxConnector()).
+     * @param distance - XOR distance for neighborhood teleportation (typically 1).
+     * @returns A related index in a parallel neighborhood (same island, different neighborhood).
+     */
+    public resolveWithTeleport(sourceIndex: bigint | number, connector: number, distance: number): bigint;
 
     /** Returns the maximum island value (2^islandBits - 1). */
     public maxIsland(): number;
@@ -165,14 +148,14 @@ class PseudoLink {
 
     /**
      * @param islandBits - Number of bits used for sharding (default: 17).
-     * @param connectorBits - Number of bits for relationship slots (default: 3).
-     * The remaining bits (40 - islandBits - connectorBits) become the neighborhood.
+     * @param neighborhoodBits - Number of bits for grouping (default: 20).
+     * The remaining bits (40 - islandBits - neighborhoodBits) become the connector.
      * Choose your layout based on requirements: more connectorBits = more relationships.
      */
-    constructor(islandBits: number, connectorBits: number) {
+    constructor(islandBits: number, neighborhoodBits: number) {
         this.islandBits = BigInt(islandBits);
-        this.connectorBits = BigInt(connectorBits);
-        this.neighborhoodBits = 40n - this.islandBits - this.connectorBits;
+        this.neighborhoodBits = BigInt(neighborhoodBits);
+        this.connectorBits = 40n - this.islandBits - this.neighborhoodBits;
         
         this.connectorMask = (1n << this.connectorBits) - 1n;
         this.neighborhoodMask = (1n << this.neighborhoodBits) - 1n;
@@ -243,6 +226,29 @@ class PseudoLink {
     }
 
     /**
+     * Resolves a relationship with neighborhood teleportation.
+     * Prevents self-references by XORing the neighborhood bits.
+     * 
+     * @param sourceIndex - Source 40-bit index value.
+     * @param connector - The target connector value (0 to maxConnector()).
+     * @param distance - XOR distance for neighborhood teleportation (typically 1).
+     * @returns A related index in a parallel neighborhood (same island, different neighborhood).
+     */
+    public resolveWithTeleport(sourceIndex: bigint | number, connector: number, distance: number): bigint {
+        if (connector < 0 || connector > this._maxConnector) {
+            throw new Error(`Connector ${connector} out of bounds (0-${this._maxConnector}).`);
+        }
+        
+        const components = this.decode(sourceIndex);
+        
+        // Teleport: XOR neighborhood bits
+        const teleportedNeighborhood = (components.neighborhood ^ distance) & this._maxNeighborhood;
+        
+        // Re-encode with teleported neighborhood
+        return this.encode(components.island, teleportedNeighborhood, connector);
+    }
+
+    /**
      * Returns the maximum island value.
      * @returns The maximum island value (2^islandBits - 1).
      */
@@ -299,7 +305,7 @@ Use `resolve()` to navigate from one entity type to another at a specific *conne
 
 **Example**: Users with the same *island* and *neighborhood* but different *connectors* all resolve to the same primary address when using connector 0.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import "github.com/pseudata/pseudata"
@@ -308,7 +314,7 @@ Use `resolve()` to navigate from one entity type to another at a specific *conne
 
     users := pseudata.NewUserArray(worldSeed)
     addresses := pseudata.NewAddressArray(worldSeed)
-    link := pseudata.NewPseudoLink(17, 3)
+    link := pseudata.NewPseudoLink(17, 20)
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     aliceIdx := link.Encode(1, 1000, 0)
@@ -328,7 +334,7 @@ Use `resolve()` to navigate from one entity type to another at a specific *conne
 
     UserArray users = new UserArray(WORLD_SEED);
     AddressArray addresses = new AddressArray(WORLD_SEED);
-    PseudoLink link = new PseudoLink(17, 3);
+    PseudoLink link = new PseudoLink(17, 20);
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     long aliceIdx = link.encode(1, 1000, 0);
@@ -346,7 +352,7 @@ Use `resolve()` to navigate from one entity type to another at a specific *conne
 
     users = UserArray(WORLD_SEED)
     addresses = AddressArray(WORLD_SEED)
-    link = PseudoLink(17, 3)
+    link = PseudoLink(17, 20)
 
     # Alice at explicit coordinates (I:1, N:1000, C:0)
     alice_idx = link.encode(1, 1000, 0)
@@ -364,7 +370,7 @@ Use `resolve()` to navigate from one entity type to another at a specific *conne
 
     const users = new UserArray(WORLD_SEED);
     const addresses = new AddressArray(WORLD_SEED);
-    const link = new PseudoLink(17, 3);
+    const link = new PseudoLink(17, 20);
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     const aliceIdx = link.encode(1, 1000, 0);
@@ -402,7 +408,7 @@ Entities sharing the same *island* and *neighborhood* but different *connector* 
 
 **Limitation**: Fixed cardinality—you cannot add more relationships than available connector slots. Increasing connector bits reduces neighborhood bits, changing the trade-off between relationship density and grouping capacity.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import "github.com/pseudata/pseudata"
@@ -411,7 +417,7 @@ Entities sharing the same *island* and *neighborhood* but different *connector* 
 
     users := pseudata.NewUserArray(worldSeed)
     groups := pseudata.NewGroupArray(worldSeed)
-    link := pseudata.NewPseudoLink(17, 3)
+    link := pseudata.NewPseudoLink(17, 20)
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     aliceIdx := link.Encode(1, 1000, 0)
@@ -434,7 +440,7 @@ Entities sharing the same *island* and *neighborhood* but different *connector* 
 
     UserArray users = new UserArray(WORLD_SEED);
     GroupArray groups = new GroupArray(WORLD_SEED);
-    PseudoLink link = new PseudoLink(17, 3);
+    PseudoLink link = new PseudoLink(17, 20);
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     long aliceIdx = link.encode(1, 1000, 0);
@@ -455,7 +461,7 @@ Entities sharing the same *island* and *neighborhood* but different *connector* 
 
     users = UserArray(WORLD_SEED)
     groups = GroupArray(WORLD_SEED)
-    link = PseudoLink(17, 3)
+    link = PseudoLink(17, 20)
 
     # Alice at explicit coordinates (I:1, N:1000, C:0)
     alice_idx = link.encode(1, 1000, 0)
@@ -476,7 +482,7 @@ Entities sharing the same *island* and *neighborhood* but different *connector* 
 
     const users = new UserArray(WORLD_SEED);
     const groups = new GroupArray(WORLD_SEED);
-    const link = new PseudoLink(17, 3);
+    const link = new PseudoLink(17, 20);
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     const aliceIdx = link.encode(1, 1000, 0);
@@ -514,7 +520,7 @@ A specialization of the one-to-many pattern where you use a single *connector* v
 
 **Example**: Users at different *connector* positions within the same *neighborhood* (C:0, C:1, C:2, etc.) all use connector 0 to find their shared primary group.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import "github.com/pseudata/pseudata"
@@ -523,7 +529,7 @@ A specialization of the one-to-many pattern where you use a single *connector* v
 
     users := pseudata.NewUserArray(worldSeed)
     groups := pseudata.NewGroupArray(worldSeed)
-    link := pseudata.NewPseudoLink(17, 3)
+    link := pseudata.NewPseudoLink(17, 20)
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     aliceIdx := link.Encode(1, 1000, 0)
@@ -543,7 +549,7 @@ A specialization of the one-to-many pattern where you use a single *connector* v
 
     UserArray users = new UserArray(WORLD_SEED);
     GroupArray groups = new GroupArray(WORLD_SEED);
-    PseudoLink link = new PseudoLink(17, 3);
+    PseudoLink link = new PseudoLink(17, 20);
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     long aliceIdx = link.encode(1, 1000, 0);
@@ -561,7 +567,7 @@ A specialization of the one-to-many pattern where you use a single *connector* v
 
     users = UserArray(WORLD_SEED)
     groups = GroupArray(WORLD_SEED)
-    link = PseudoLink(17, 3)
+    link = PseudoLink(17, 20)
 
     # Alice at explicit coordinates (I:1, N:1000, C:0)
     alice_idx = link.encode(1, 1000, 0)
@@ -579,7 +585,7 @@ A specialization of the one-to-many pattern where you use a single *connector* v
 
     const users = new UserArray(WORLD_SEED);
     const groups = new GroupArray(WORLD_SEED);
-    const link = new PseudoLink(17, 3);
+    const link = new PseudoLink(17, 20);
 
     // Alice at explicit coordinates (I:1, N:1000, C:0)
     const aliceIdx = link.encode(1, 1000, 0);
@@ -595,106 +601,150 @@ A specialization of the one-to-many pattern where you use a single *connector* v
 
 ### Same-Entity Relationships
 
-**Cross-Neighborhood Controlled Pattern**
+**Neighborhood Teleportation Pattern**
 
 ![Same-Entity Relationship Diagram](/images/relation-same-entity.svg)
 
-Entities in different *neighborhoods* but the same *island* create explicit, controlled relationships similar to foreign keys. This avoids the automatic many-to-many coupling of within-neighborhood patterns.
+When a model links to itself (e.g., User → User for manager relationships), naive approaches can create **self-references** where an entity points to itself. Pseudata solves this with **neighborhood teleportation** using the `resolveWithTeleport()` method.
 
-**Coordinate Structure:**
-- Fixed: *island* (e.g., `1`)
-- Variable: *neighborhood* (e.g., User at N:`1000`, Mentor at N:`2000`)
-- *Connector* can be fixed or variable depending on use case
+**The Problem:**
+```
+Without teleportation:
+Source: Island=1, Neighborhood=1000, Connector=0
+Target: Island=1, Neighborhood=1000, Connector=0
+❌ Same entity! (self-reference)
+```
+
+**The Solution:**
+```
+With distance=1 teleportation:
+Source: Island=1, Neighborhood=1000, Connector=0
+Target: Island=1, Neighborhood=1001, Connector=0  (1000 XOR 1 = 1001)
+✅ Different entity! (no self-reference)
+```
+
+**How It Works:**
+- The `distance` parameter is XORed with the neighborhood bits
+- `distance: 1` teleports from neighborhood 1000 to 1001
+- Same island (shard-safe), different neighborhood = different entity
+- Mathematical guarantee: $N \oplus \text{distance} \neq N (\text{ when } \text{distance} \neq 0)$
 
 **Characteristics:**
-- **Cardinality**: Controlled and explicit (not automatic)
-- **Navigation**: Construct indices for both directions using `encode()`
-- **Shard Safety**: Maintained through same island value
-- **Use Case**: Hierarchical or explicit relationships (Mentee→Mentor, Employee→Manager)
+- **Cardinality**: Prevents self-references automatically
+- **Navigation**: Use `resolveWithTeleport(sourceIndex, connector, distance)`
+- **Shard Safety**: Maintained (same island value)
+- **Use Case**: Organizational hierarchies (Employee→Manager), mentorship, buddy systems
 
-**Pattern Example**: Mentorship
-- Mentees occupy neighborhoods 1000-1999
-- Mentors occupy neighborhoods 2000-2999
-- Alice at (I:1, N:1000, C:0) → Bob at (I:1, N:2000, C:0)
-- Relationship is explicit, not derived from automatic connector iteration
+**Pattern Example**: Manager Hierarchy
+```
+Employee at N:1000 → Manager at N:1001 (distance=1)
+Manager navigates back to find all reports at N:1000
+```
 
-**Advantage**: Models real-world relationships where connections are explicit assignments, not automatic groupings. More flexible than within-neighborhood patterns but requires coordinate convention planning.
-
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import "github.com/pseudata/pseudata"
 
-    const worldSeed = int64(42)
-
-    users := pseudata.NewUserArray(worldSeed)
-    link := pseudata.NewPseudoLink(17, 3)
-
-    // Place Alice in neighborhood 1000
-    aliceIdx := link.Encode(1, 1000, 0)
-    alice := users.At(aliceIdx)
-
-    // Place her mentor (Bob) in a different neighborhood (shard-safe, same island)
-    mentorIdx := link.Encode(1, 2000, 0)
-    mentor := users.At(mentorIdx)
+    users := pseudata.NewUserArray(42)
+    link := users.LinkAt(1000)
+    
+    // Forward: Find manager (teleport to parallel neighborhood)
+    manager := link.Manager()  // Uses ResolveWithTeleport(index, 0, 1)
+    fmt.Printf("%s reports to %s\n", link.Me().Name, manager.Name)
+    
+    // Reverse: Find direct reports (teleport back)
+    fmt.Printf("%s manages:\n", link.Me().Name)
+    for report := range link.Directs() {
+        fmt.Printf("  - %s\n", report.Name)
+    }
     ```
   </TabItem>
   <TabItem label="Java">
     ```java
     import dev.pseudata.UserArray;
-    import dev.pseudata.PseudoLink;
 
-    final long WORLD_SEED = 42L;
-
-    UserArray users = new UserArray(WORLD_SEED);
-    PseudoLink link = new PseudoLink(17, 3);
-
-    // Place Alice in neighborhood 1000
-    long aliceIdx = link.encode(1, 1000, 0);
-    User alice = users.at(aliceIdx);
-
-    // Place her mentor (Bob) in a different neighborhood (shard-safe, same island)
-    long mentorIdx = link.encode(1, 2000, 0);
-    User mentor = users.at(mentorIdx);
+    UserArray users = new UserArray(42L);
+    UserLink link = users.linkAt(1000);
+    
+    // Forward: Find manager (teleport to parallel neighborhood)
+    User manager = link.manager();  // Uses resolveWithTeleport(index, 0, 1)
+    System.out.printf("%s reports to %s%n", 
+        link.me().getName(), manager.getName());
+    
+    // Reverse: Find direct reports (teleport back)
+    System.out.printf("%s manages:%n", link.me().getName());
+    for (User report : link.directs()) {
+        System.out.printf("  - %s%n", report.getName());
+    }
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
-    from pseudata import UserArray, PseudoLink
+    from pseudata import UserArray
 
-    WORLD_SEED = 42
-
-    users = UserArray(WORLD_SEED)
-    link = PseudoLink(17, 3)
-
-    # Place Alice in neighborhood 1000
-    alice_idx = link.encode(1, 1000, 0)
-    alice = users.at(alice_idx)
-
-    # Place her mentor (Bob) in a different neighborhood (shard-safe, same island)
-    mentor_idx = link.encode(1, 2000, 0)
-    mentor = users.at(mentor_idx)
+    users = UserArray(42)
+    link = users.link_at(1000)
+    
+    # Forward: Find manager (teleport to parallel neighborhood)
+    manager = link.manager()  # Uses resolve_with_teleport(index, 0, 1)
+    print(f"{link.me().name} reports to {manager.name}")
+    
+    # Reverse: Find direct reports (teleport back)
+    print(f"{link.me().name} manages:")
+    for report in link.directs():
+        print(f"  - {report.name}")
     ```
   </TabItem>
   <TabItem label="TypeScript">
     ```typescript
-    import { UserArray, PseudoLink } from '@pseudata/core';
+    import { UserArray } from '@pseudata/core';
 
-    const WORLD_SEED = 42n;
-
-    const users = new UserArray(WORLD_SEED);
-    const link = new PseudoLink(17, 3);
-
-    // Place Alice in neighborhood 1000
-    const aliceIdx = link.encode(1, 1000, 0);
-    const alice = users.at(aliceIdx);
-
-    // Place her mentor (Bob) in a different neighborhood (shard-safe, same island)
-    const mentorIdx = link.encode(1, 2000, 0);
-    const mentor = users.at(mentorIdx);
+    const users = new UserArray(42n);
+    const link = users.linkAt(1000);
+    
+    // Forward: Find manager (teleport to parallel neighborhood)
+    const manager = link.manager();  // Uses resolveWithTeleport(index, 0, 1)
+    console.log(`${link.me().name} reports to ${manager.name}`);
+    
+    // Reverse: Find direct reports (teleport back)
+    console.log(`${link.me().name} manages:`);
+    for (const report of link.directs()) {
+        console.log(`  - ${report.name}`);
+    }
     ```
   </TabItem>
 </Tabs>
+
+**Multiple Self-Relations:**
+
+Use different `distance` values to teleport to unique parallel neighborhoods:
+
+```
+Employee at Neighborhood 1000:
+  - manager() with distance=1  → Neighborhood 1001
+  - mentor() with distance=3   → Neighborhood 1003  
+  - buddy() with distance=5    → Neighborhood 1005
+```
+
+Each relationship uses `resolveWithTeleport()` with a different distance to guarantee no collisions between relationship types.
+
+**Direct Usage Example:**
+
+```typescript
+const link = new PseudoLink(17, 20);
+
+// Employee at index with neighborhood 1000
+const employeeIdx = link.encode(1, 1000, 0);
+
+// Find manager in parallel neighborhood (1000 XOR 1 = 1001)
+const managerIdx = link.resolveWithTeleport(employeeIdx, 0, 1);
+
+// Find mentor in different parallel neighborhood (1000 XOR 3 = 1003)
+const mentorIdx = link.resolveWithTeleport(employeeIdx, 1, 3);
+```
+
+See the [Using Relations guide](/guides/using-relations/#self-referencing-relationships) for complete examples with the `@link` decorator and generated Link classes.
 
 ---
 
@@ -721,7 +771,7 @@ Bidirectional relationships depend on the pattern used:
 
 **Design Choice**: Use within-neighborhood for automatic symmetric relationships (friendships, group membership). Use cross-neighborhood when direction matters or cardinality needs control.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import "github.com/pseudata/pseudata"
@@ -729,7 +779,7 @@ Bidirectional relationships depend on the pattern used:
     const worldSeed = int64(42)
 
     users := pseudata.NewUserArray(worldSeed)
-    link := pseudata.NewPseudoLink(17, 3)
+    link := pseudata.NewPseudoLink(17, 20)
 
     // Alice in neighborhood 1000
     aliceIdx := link.Encode(1, 1000, 0)
@@ -756,7 +806,7 @@ Bidirectional relationships depend on the pattern used:
     final long WORLD_SEED = 42L;
 
     UserArray users = new UserArray(WORLD_SEED);
-    PseudoLink link = new PseudoLink(17, 3);
+    PseudoLink link = new PseudoLink(17, 20);
 
     // Alice in neighborhood 1000
     long aliceIdx = link.encode(1, 1000, 0);
@@ -782,7 +832,7 @@ Bidirectional relationships depend on the pattern used:
     WORLD_SEED = 42
 
     users = UserArray(WORLD_SEED)
-    link = PseudoLink(17, 3)
+    link = PseudoLink(17, 20)
 
     # Alice in neighborhood 1000
     alice_idx = link.encode(1, 1000, 0)
@@ -808,7 +858,7 @@ Bidirectional relationships depend on the pattern used:
     const WORLD_SEED = 42n;
 
     const users = new UserArray(WORLD_SEED);
-    const link = new PseudoLink(17, 3);
+    const link = new PseudoLink(17, 20);
 
     // Alice in neighborhood 1000
     const aliceIdx = link.encode(1, 1000, 0);
@@ -914,7 +964,7 @@ A relationship calculated via *pseudo-links* will **never** cross a shard bounda
 
 ## Integration with Pseudo-IDs
 
-A *pseudo-link* operates on the **40-bit index component** of [Pseudo-IDs](/reference/pseudo-ids/). When you create a PseudoID with `encodeId(worldSeed, typeSeq, index)`, the `index` parameter is just a 40-bit number. `PseudoLink` provides a coordinate system for manipulating those bits to create relationships.
+A *pseudo-link* operates on the **40-bit index component** of [Pseudo-IDs](/advanced/pseudo-ids/). When you create a PseudoID with `encodeId(worldSeed, typeSeq, index)`, the `index` parameter is just a 40-bit number. `PseudoLink` provides a coordinate system for manipulating those bits to create relationships.
 
 **Key points:**
 - *Pseudo-links* work with the *index* component (40 bits) of PseudoIDs
@@ -927,7 +977,7 @@ A *pseudo-link* operates on the **40-bit index component** of [Pseudo-IDs](/refe
 import { encodeId, PseudoLink } from '@pseudata/core';
 
 const worldSeed = 42n;
-const link = new PseudoLink(17, 3);
+const link = new PseudoLink(17, 20);
 
 // Start with coordinates for entity A (e.g., User)
 const indexA = link.encode(1, 1000, 0);
@@ -942,6 +992,6 @@ const groupID = encodeId(worldSeed, 102, indexB);  // Type 102 = Groups
 
 ## See Also
 
-- **[Pseudo-IDs](/reference/pseudo-ids/)** - Learn about the complete *pseudo-id* structure and how the 40-bit index component works with *pseudo-links*
-- **[Pseudo-Arrays](/reference/pseudo-arrays/)** - Understand how *pseudo-arrays* use indices to provide $O(1)$ access to deterministic mock data
+- **[Pseudo-IDs](/advanced/pseudo-ids/)** - Learn about the complete *pseudo-id* structure and how the 40-bit index component works with *pseudo-links*
+- **[Pseudo-Arrays](/advanced/pseudo-arrays/)** - Understand how *pseudo-arrays* use indices to provide $O(1)$ access to deterministic mock data
 - **[Primitives](/reference/primitives/)** - Learn about the generator functions that can use indices constructed with *pseudo-links*

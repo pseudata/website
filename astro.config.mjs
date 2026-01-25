@@ -1,10 +1,11 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import starlightLlmsTxt from "starlight-llms-txt";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import path from "path";
+import { remarkStripH1 } from "./scripts/remark-strip-h1.mjs";
 
-// https://astro.build/config
 export default defineConfig({
   site: "https://pseudata.dev",
   server: {
@@ -13,6 +14,57 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Pseudata",
+      editLink: {
+        baseUrl: "https://github.com/pseudata/website/edit/main/",
+      },
+      lastUpdated: true,
+      tableOfContents: {
+        minHeadingLevel: 2,
+        maxHeadingLevel: 3,
+      },
+      plugins: [
+        starlightLlmsTxt({
+          pageSeparator: "\n\n------\n\n",
+          exclude: ["contributing/**", "benchmarks/**", "glossary/**"],
+          customSets: [
+            {
+              label: "Guides",
+              description: "step-by-step guides to using my project",
+              paths: ["guides/**"],
+            },
+            {
+              label: "Examples",
+              description: "practical examples demonstrating features",
+              paths: ["examples/**"],
+            },
+            {
+              label: "Reference",
+              description: "reference documentation for my project",
+              paths: ["reference/**"],
+            },
+            {
+              label: "Advanced",
+              description: "advanced topics and deep dives",
+              paths: ["advanced/**"],
+            },
+            {
+              label: "Contributing",
+              description: "guidelines for contributing to the project",
+              paths: ["contributing/**"],
+            },
+            {
+              label: "Glossary",
+              description: "glossary of terms and definitions",
+              paths: ["glossary/**"],
+            },
+            {
+              label: "Blog",
+              description: "latest news and articles",
+              paths: ["blog/**"],
+            },
+          ],
+        }),
+      ],
       head: [
         {
           tag: "link",
@@ -133,6 +185,7 @@ export default defineConfig({
       },
       customCss: ["./src/styles/custom.css"],
       components: {
+        Head: "./src/components/CustomHead.astro",
         Footer: "./src/components/Footer.astro",
       },
       social: [
@@ -148,17 +201,41 @@ export default defineConfig({
           autogenerate: { directory: "guides" },
         },
         {
-          label: "Benchmarks",
-          link: "/benchmarks",
-        },
-        {
           label: "Reference",
           autogenerate: { directory: "reference" },
         },
         {
           label: "Examples",
           collapsed: true,
-          autogenerate: { directory: "examples" },
+          items: [
+            "examples",
+            {
+              label: "Generator",
+              collapsed: true,
+              items: [
+                "examples/generator-basic",
+                "examples/generator-advance",
+                "examples/generator-sequence",
+                "examples/generator-streams",
+                "examples/generator-seedfrom",
+              ],
+            },
+            {
+              label: "IDs",
+              collapsed: true,
+              items: ["examples/pseudoid-encode", "examples/pseudoid-decode"],
+            },
+            { label: "Primitives", collapsed: true, items: ["examples/primitives-basic"] },
+          ],
+        },
+        {
+          label: "Advanced",
+          collapsed: true,
+          autogenerate: { directory: "advanced" },
+        },
+        {
+          label: "Benchmarks",
+          link: "/benchmarks",
         },
         {
           label: "Contributing",
@@ -166,20 +243,25 @@ export default defineConfig({
           autogenerate: { directory: "contributing" },
         },
         {
+          label: "Glossary",
+          link: "/glossary",
+        },
+        {
           label: "Blog",
+          collapsed: true,
           autogenerate: { directory: "blog" },
         },
       ],
     }),
   ],
   markdown: {
-    remarkPlugins: [remarkMath],
+    remarkPlugins: [remarkMath, remarkStripH1],
     rehypePlugins: [rehypeKatex],
   },
   vite: {
     resolve: {
       alias: {
-        "@examples": path.resolve("/src/examples"),
+        "@examples": path.resolve("./src/examples"),
       },
     },
   },

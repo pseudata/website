@@ -1,38 +1,6 @@
 ---
 title: Glossary
 description: Complete reference of Pseudata terms, concepts, and formatting conventions
-sidebar:
-  order: 99
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": "Glossary",
-        "description": "Complete reference of Pseudata terms, concepts, and formatting conventions",
-        "author": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/reference/glossary/"
-        },
-        "keywords": ["glossary", "terminology", "pseudata", "pseudo-id", "pseudo-array", "pseudo-link"]
-      }
 ---
 
 Complete reference of all Pseudata terms, concepts, and naming conventions.
@@ -46,7 +14,7 @@ The three fundamental building blocks of the Pseudata system.
 An infinite, deterministic array that generates elements on-demand using pseudo-random algorithms. Each element is calculated when accessed, with $O(1)$ complexity and zero memory overhead.
 
 **Class:** `PseudoArray`  
-**Reference:** [Pseudo-Arrays](/reference/pseudo-arrays/)  
+**Reference:** [Pseudo-Arrays](/advanced/pseudo-arrays/)  
 **Example:** `const users = new UserArray(42n);`
 
 ### *pseudo-id*
@@ -54,7 +22,7 @@ An infinite, deterministic array that generates elements on-demand using pseudo-
 A deterministic, sortable UUID v8 identifier that encodes three components: *world-seed*, *type-sequence*, and *index*. Unlike random UUIDs, *pseudo-ids* are reproducible and self-describing.
 
 **Class:** `PseudoID`  
-**Reference:** [Pseudo-IDs](/reference/pseudo-ids/)  
+**Reference:** [Pseudo-IDs](/advanced/pseudo-ids/)  
 **Format:** `xxxxxxxx-xxxx-8xxx-yxxx-xxxxxxxxxxxx`  
 **Example:** `0000002a-0000-8000-a065-00000003e8`
 
@@ -63,7 +31,7 @@ A deterministic, sortable UUID v8 identifier that encodes three components: *wor
 A coordinate system for manipulating 40-bit indices to create stateless relationships between entities. Enables $O(1)$ navigation between related indices through bitwise operations without storing connection data.
 
 **Class:** `PseudoLink`  
-**Reference:** [Pseudo-Links](/reference/pseudo-links/)  
+**Reference:** [Pseudo-Links](/advanced/pseudo-links/)  
 **Example:** `const link = new PseudoLink(17, 3);`
 
 ---

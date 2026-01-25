@@ -37,3 +37,8 @@ a {
   background-color: var(--sl-color-accent-high);
   border-color: var(--sl-color-accent-high);
 }
+
+/* Set content width for example pages */
+head:has(link[rel="canonical"][href*="/examples/"]) + body {
+  --sl-content-width: 66rem;
+}

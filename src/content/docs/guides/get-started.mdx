@@ -3,36 +3,6 @@ title: "Get Started"
 description: "Quick start guide to understanding and using Pseudata for cross-language mock data generation"
 sidebar:
   order: 1
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": "Get Started with Pseudata",
-        "description": "Quick start guide to understanding and using Pseudata for cross-language mock data generation",
-        "author": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/guides/get-started/"
-        },
-        "keywords": ["getting started", "tutorial", "mock data", "PCG32", "cross-language", "testing"]
-      }
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
@@ -67,7 +37,7 @@ This means: Given the same seed, PCG32 generates the exact same sequence of numb
 
 **The result? Perfect cross-language consistency.**
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     package main
@@ -132,7 +102,7 @@ This means: Given the same seed, PCG32 generates the exact same sequence of numb
 
 **Installation (when released):**
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```bash
     go get github.com/pseudata/pseudata
@@ -184,7 +154,7 @@ users := pseudata.NewUserArray(42, pseudata.WithResources(emea.Resources))
 ## Next Steps
 
 - **Learn why this matters:** Read the [Introduction blog post](/blog/introduction/)
-- **Understand the architecture:** See how it works in the [Concept document](/reference/concept/)
+- **Understand the architecture:** See how it works in the [Concept document](/advanced/concept/)
 - **Follow development:** Watch progress on [GitHub](https://github.com/pseudata/pseudata)
 
 ## Current Status

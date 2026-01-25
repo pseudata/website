@@ -10,7 +10,7 @@ hero:
       icon: right-arrow
       variant: primary
     - text: Concept
-      link: /reference/concept/
+      link: /advanced/concept/
       icon: open-book
       variant: secondary
     - text: GitHub
@@ -72,10 +72,10 @@ Pseudata solves this by making mock data generation a standardized algorithm—n
 
 <CardGrid>
   <Card title="Cross-Language Consistency" icon="approve-check">
-    Same seed = same data across all languages. No more integration test mismatches. [Learn more →](/reference/concept/#cross-language-consistency)
+    Same seed = same data across all languages. No more integration test mismatches. [Learn more →](/advanced/concept/#cross-language-consistency)
   </Card>
   <Card title="Infinite Scale" icon="rocket">
-    $O(1)$ instant access to billions of records with zero memory overhead. [Learn more →](/reference/pseudo-arrays/)
+    $O(1)$ instant access to billions of records with zero memory overhead. [Learn more →](/advanced/pseudo-arrays/)
   </Card>
   <Card title="Stateless Relations" icon="puzzle">
     Create deterministic relationships without a database. Navigate entities in $O(1)$ time. [Learn more →](/guides/using-relations/)
@@ -163,7 +163,7 @@ user = users.at(1_000_000_000)  # Instant
 
 ![Diagram showing seed 42 flowing to Go, Java, Python, and TypeScript implementations, all producing identical output: John Smith](/images/consistency-diagram.svg)
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     package main
@@ -222,7 +222,7 @@ Traditional mock data is "flat"—users and groups have no inherent connection u
 
 ![Stateless Relationships Diagram](/images/stateless-relationships.svg)
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Concept">
 
 **Relational data that exists mathematically**
@@ -343,7 +343,7 @@ Modern build tools automatically tree-shake unused bundles. You only ship what y
 
 By default, Pseudata loads only the **US bundle** (`en_US` locale). This means you can start using Pseudata immediately without any configuration:
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import "github.com/pseudata/pseudata"
@@ -379,7 +379,7 @@ By default, Pseudata loads only the **US bundle** (`en_US` locale). This means y
 
 Import a bundle and pass it via options to use locales from that region.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import (
@@ -394,9 +394,9 @@ Import a bundle and pass it via options to use locales from that region.
   <TabItem label="Java">
     ```java
     import dev.pseudata.UserArray;
-    import dev.pseudata.resources.bundles.ResourcesNA;
+    import dev.pseudata.resources.bundles.na.Resources;
     
-    UserArray users = new UserArray(42, ResourcesNA.INSTANCE);
+    UserArray users = new UserArray(42, Resources.INSTANCE);
     ```
   </TabItem>
 
@@ -412,9 +412,9 @@ Import a bundle and pass it via options to use locales from that region.
   <TabItem label="TypeScript">
     ```typescript
     import { UserArray } from '@pseudata/core';
-    import { ResourcesNA } from '@pseudata/core/resources/bundles/na';
+    import { Resources } from '@pseudata/core/resources/bundles/na';
     
-    const users = new UserArray(42n, { resources: ResourcesNA });
+    const users = new UserArray(42n, { resources: Resources });
     ```
   </TabItem>
 </Tabs>

@@ -1,0 +1,54 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  entry?: CollectionEntry<"docs">;
+}
+
+// 1. Try to get entry from Props, fallback to Starlight's global route data
+// Note: 'starlightRoute' is available in Starlight v0.18+
+const entry = Astro.props.entry || Astro.locals.starlightRoute?.entry;
+
+// 2. Debugging: If it's still missing, log what we DO have
+if (!entry) {
+  console.log("StructuredData: Entry still missing. Keys available:", Object.keys(Astro.props));
+  return null;
+}
+
+// 3. Determine context
+const isBlog = entry.id.startsWith("blog/");
+const canonicalURL = new URL(Astro.url.pathname, "https://pseudata.dev").toString();
+
+// 4. Construct the schema
+const schema: Record<string, any> = {
+  "@context": "https://schema.org",
+  "@type": isBlog ? "BlogPosting" : "TechArticle",
+  headline: entry.data.title,
+  description: entry.data.description,
+  author: {
+    "@type": isBlog ? "Person" : "Organization",
+    name: isBlog ? entry.data.author || "Pseudata Team" : "Pseudata",
+    url: "https://pseudata.dev",
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Pseudata",
+    url: "https://pseudata.dev",
+    logo: {
+      "@type": "ImageObject",
+      url: "https://pseudata.dev/logo-light.svg",
+    },
+  },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": canonicalURL,
+  },
+  keywords: entry.data.keywords || [],
+};
+
+if (entry.data.date) {
+  schema.datePublished = new Date(entry.data.date).toISOString();
+}
+---
+
+<script is:inline type="application/ld+json" set:html={JSON.stringify(schema)} />

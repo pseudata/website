@@ -1,0 +1,992 @@
+---
+title: Add New Links
+description: Learn how to add new relationships between models using the @link decorator for deterministic, stateless relationships in Pseudata.
+sidebar:
+  order: 2
+---
+
+This guide teaches you how to add new relationships between models using the `@link` decorator. Whether you're creating simple one-to-one relationships or complex self-referencing hierarchies, this guide has you covered.
+
+The `@link` decorator creates deterministic, stateless relationships between models in pseudo-arrays. It generates Link classes that provide O(1) or O(connector_bits) navigation between related entities using bitwise index encoding.
+
+**When to use `@link`:**
+- Creating relationships between different models (User → Address)
+- Creating hierarchical relationships within the same model (User → User for managers)
+- Enabling bidirectional navigation (forward and reverse)
+- Building complex data models with multiple relationships
+
+**What `@link` generates:**
+- Link classes with type-safe navigation methods
+- PseudoLink instances for bitwise index operations
+- Factory methods on Array classes (`linkAt`, `linkFor`)
+- Forward and optional reverse navigation methods
+
+---
+
+## Basic Anatomy
+
+Here's an annotated example of the `@link` decorator:
+
+```typespec
+@link(
+  Address,              // 1. Target model to link to
+  17,                   // 2. Island bits (shard boundary)
+  20,                   // 3. Neighborhood bits (grouping)
+  [                     // 4. Array of relationships
+    {
+      connector: 0,                    // Slot number (0-7 with 3 connector bits)
+      name: "homeAddress",             // Forward method name
+      cardinality: "one-to-one",       // Relationship type
+      reverse: "homeAddressFor",       // Optional reverse method name
+      docs: "User's primary residence" // Optional documentation
+    }
+  ]
+)
+model User {
+  id: string;
+  name: string;
+}
+```
+
+This generates:
+```go
+// Forward navigation (User → Address)
+func (ul *UserLink) HomeAddress() *Address
+
+// Reverse navigation (Address → User)
+func (al *AddressLink) HomeAddressFor() *User
+```
+
+---
+
+## Parameter Reference
+
+### Decorator Parameters
+
+#### `targetModel` (required)
+- **Type:** Model reference
+- **Description:** The model you're linking to
+- **Example:** `Address`, `Group`, `User`
+
+#### `islandBits` (required)
+- **Type:** Number
+- **Description:** Number of bits for shard identification (high bits)
+- **Typical value:** `17`
+- **Range:** 0-40, but typically 15-20
+- **Purpose:** Keeps related entities on the same shard for database partitioning
+
+#### `neighborhoodBits` (required)
+- **Type:** Number
+- **Description:** Number of bits for entity grouping (middle bits)
+- **Typical value:** `20` for same-model relations, `15` for cross-model
+- **Range:** 0-40, but sum with islandBits must not exceed 40
+- **Purpose:** Groups related entities together in the same "neighborhood"
+
+**Connector bits calculation:**
+```
+connectorBits = 40 - islandBits - neighborhoodBits
+maxConnector = (2^connectorBits) - 1
+```
+
+**Example:** `islandBits=17, neighborhoodBits=20`
+- Connector bits: 40 - 17 - 20 = **3 bits**
+- Max connector: 2³ - 1 = **7**
+- Available slots: **0, 1, 2, 3, 4, 5, 6, 7**
+
+#### `relationships` (required)
+- **Type:** Array of relationship objects
+- **Description:** Defines one or more relationships to the target model
+
+### Relationship Object Parameters
+
+#### `connector` (required)
+- **Type:** Number
+- **Description:** The slot number for this relationship
+- **Range:** 0 to maxConnector (based on connector bits)
+- **Example:** `0`, `1`, `2`
+
+#### `name` (required)
+- **Type:** String
+- **Description:** Forward navigation method name
+- **Convention:** camelCase, singular for to-one, plural for to-many
+- **Examples:** `homeAddress`, `manager`, `addresses`
+
+#### `cardinality` (required)
+- **Type:** String
+- **Values:** `"one-to-one"`, `"many-to-one"`, `"one-to-many"`
+- **Description:** The type of relationship
+- **See:** [Choosing Cardinality](#choosing-cardinality)
+
+#### `reverse` (optional)
+- **Type:** String
+- **Description:** Reverse navigation method name
+- **Convention:** Describes the relationship from the target's perspective
+- **Examples:** `homeAddressFor`, `directs`, `owner`, `members`
+- **Note:** Omit if you only need forward navigation
+
+:::tip[Terminology]
+The `reverse` parameter enables **reverse navigation** (navigating from target back to source). When both forward and reverse are specified, the relationship becomes **bidirectional** (navigable in both directions).
+:::
+
+#### `distance` (optional, required for self-relations)
+- **Type:** Number
+- **Default:** `0`
+- **Description:** XOR distance for neighborhood teleportation
+- **When required:** **All self-referencing relationships** (when targetModel is same as sourceModel)
+- **Typical value:** `1` for single self-relation, `1, 3, 5, 7` for multiple
+- **Purpose:** Prevents entities from referencing themselves
+- **See:** [Self-Referencing Relationships](#self-referencing-relationships)
+
+#### `docs` (optional)
+- **Type:** String
+- **Description:** Documentation for the relationship
+- **Example:** `"User's primary residence"`
+
+---
+
+## Choosing Connector Values
+
+Connector values are **slots** in the relationship. Think of them as numbered parking spaces.
+
+### Rules:
+
+1. **Start at 0** for the first relationship
+2. **Use sequential values** (0, 1, 2, 3...)
+3. **Don't skip numbers** unless you have a good reason
+4. **Don't reuse connectors** within the same @link decorator
+5. **Reserve ranges** for one-to-many relationships
+
+### Examples:
+
+**Single relationship:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 0, name: "homeAddress", cardinality: "one-to-one" }
+])
+```
+
+**Multiple one-to-one relationships:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 0, name: "homeAddress", cardinality: "one-to-one" },
+  { connector: 1, name: "workAddress", cardinality: "one-to-one" }
+])
+```
+
+**Mixed: one-to-one and one-to-many:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 0, name: "homeAddress", cardinality: "one-to-one" },
+  { connector: 1, name: "workAddress", cardinality: "one-to-one" },
+  { connector: 2, name: "addresses", cardinality: "one-to-many" }
+  // Connectors 2-7 are used by "addresses" iterator
+])
+```
+
+### One-to-Many Connector Allocation
+
+One-to-many relationships **consume all remaining connectors** from the base connector to maxConnector:
+
+```
+With 3 connector bits (0-7):
+- connector: 0 → homeAddress (slot 0)
+- connector: 1 → workAddress (slot 1)
+- connector: 2 → addresses (slots 2, 3, 4, 5, 6, 7)
+```
+
+**Best practice:** Put one-to-many relationships **last** to maximize their range.
+
+---
+
+## Choosing Cardinality
+
+Cardinality defines **how many** entities are on each side of the relationship.
+
+### One-to-One
+
+**Pattern:** Each source entity relates to exactly one target entity.
+
+**Examples:**
+- User → homeAddress
+- User → profile
+- Employee → badgeNumber
+
+**Navigation:**
+- Forward: Returns single object (O(1))
+- Reverse: Returns single object (O(1))
+
+**TypeSpec:**
+```typespec
+{ connector: 0, name: "homeAddress", cardinality: "one-to-one" }
+```
+
+**Usage:**
+```go
+address := userLink.HomeAddress()  // One user has one home address
+```
+
+### Many-to-One
+
+**Pattern:** Multiple source entities can relate to the same target entity.
+
+**Examples:**
+- User → primaryGroup (many users in one group)
+- User → manager (many employees report to one manager)
+- Order → customer (many orders from one customer)
+
+**Navigation:**
+- Forward: Returns single object (O(1))
+- Reverse: Returns iterator (O(2^connectorBits))
+
+**TypeSpec:**
+```typespec
+{ connector: 0, name: "primaryGroup", cardinality: "many-to-one", reverse: "members" }
+```
+
+**Usage:**
+```go
+group := userLink.PrimaryGroup()           // Forward: User → Group (O(1))
+for user := range groupLink.Members() {    // Reverse: Group → Users (O(N))
+    fmt.Println(user.Name)
+}
+```
+
+### One-to-Many
+
+**Pattern:** Each source entity relates to multiple target entities.
+
+**Examples:**
+- User → addresses (one user has many addresses)
+- Department → employees
+- Order → lineItems
+
+**Navigation:**
+- Forward: Returns iterator (O(2^connectorBits))
+- Reverse: Returns single object (O(1))
+
+**TypeSpec:**
+```typespec
+{ connector: 2, name: "addresses", cardinality: "one-to-many", reverse: "owner" }
+```
+
+**Usage:**
+```go
+for addr := range userLink.Addresses() {  // Forward: User → Addresses (O(N))
+    fmt.Println(addr.Formatted)
+}
+user := addressLink.Owner()               // Reverse: Address → User (O(1))
+```
+
+### Decision Tree
+
+```
+How many targets per source?
+├─ Exactly one → "one-to-one" or "many-to-one"
+│  └─ Can multiple sources share one target?
+│     ├─ Yes → "many-to-one"
+│     └─ No → "one-to-one"
+└─ Multiple → "one-to-many"
+```
+
+---
+
+## Self-Referencing Relationships
+
+Self-referencing relationships link a model to itself (e.g., User → User for organizational hierarchies).
+
+### ⚠️ Critical Requirement: Distance Parameter
+
+**All self-referencing relationships MUST include the `distance` parameter** to prevent entities from referencing themselves.
+
+### Why Distance is Required
+
+Without distance, an entity at index 1000 could resolve to itself:
+```
+Source: Island=1, Neighborhood=1000, Connector=0
+Target: Island=1, Neighborhood=1000, Connector=0
+❌ Same entity! (self-reference)
+```
+
+With `distance: 1`, the entity "teleports" to a parallel neighborhood:
+```
+Source: Island=1, Neighborhood=1000, Connector=0
+Target: Island=1, Neighborhood=1001, Connector=0  (1000 XOR 1 = 1001)
+✅ Different entity! (no self-reference)
+```
+
+### Teleportation Mental Model
+
+Think of neighborhoods as **parallel universes**:
+- Your entity exists in Neighborhood 1000
+- Your manager exists in Neighborhood 1001 (parallel universe)
+- Same island (shard), different neighborhood = different person
+
+The XOR operation guarantees: `N XOR distance ≠ N` (when distance ≠ 0)
+
+### Basic Self-Relation Example
+
+```typespec
+@link(User, 17, 20, [
+  { 
+    connector: 0, 
+    name: "manager", 
+    cardinality: "many-to-one",
+    reverse: "directs",
+    distance: 1,  // ✅ Required! Prevents self-references
+    docs: "User's direct manager in organizational hierarchy"
+  }
+])
+model User {
+  id: string;
+  name: string;
+}
+```
+
+**Usage:**
+```go
+users := pseudata.NewUserArray(42)
+link := users.LinkAt(1000)
+
+// Navigate up the hierarchy
+manager := link.Manager()
+fmt.Printf("%s reports to %s\n", link.Me().Name, manager.Name)
+
+// Navigate down the hierarchy
+fmt.Printf("%s manages:\n", link.Me().Name)
+for report := range link.Directs() {
+    fmt.Printf("  - %s\n", report.Name)
+}
+```
+
+### Multiple Self-Relations
+
+Use **different distance values** for each relationship to teleport to unique parallel neighborhoods:
+
+```typespec
+@link(User, 17, 20, [
+  { 
+    connector: 0, 
+    name: "manager", 
+    distance: 1,  // → Neighborhood XOR 1
+    cardinality: "many-to-one",
+    reverse: "directs",
+    docs: "Direct manager in reporting hierarchy"
+  },
+  { 
+    connector: 1, 
+    name: "mentor", 
+    distance: 3,  // → Neighborhood XOR 3
+    cardinality: "many-to-one",
+    reverse: "mentees",
+    docs: "Career development mentor"
+  },
+  { 
+    connector: 2, 
+    name: "buddy", 
+    distance: 5,  // → Neighborhood XOR 5
+    cardinality: "many-to-one",
+    docs: "Onboarding buddy (no reverse needed)"
+  }
+])
+model User {
+  id: string;
+  name: string;
+}
+```
+
+**Distance value recommendations:**
+- Use odd numbers: `1, 3, 5, 7, 9` (they have good XOR distribution)
+- Use small numbers for primary relationships
+- Use larger numbers for secondary relationships
+
+### TypeSpec Validation
+
+TypeSpec will **warn** you if you forget `distance` on a self-relation:
+
+```
+⚠ Warning: Self-relation 'manager' may cause self-references. Add distance: 1
+```
+
+If you explicitly set `distance: 0` (unusual):
+```
+⚠ Warning: Self-relation 'manager' with distance: 0 allows self-references (intentional?)
+```
+
+---
+
+## Naming Conventions
+
+Good names make your API intuitive and self-documenting.
+
+### Forward Navigation Names
+
+**Format:** Describes what you're navigating **to**.
+
+#### To-One Relationships (one-to-one, many-to-one)
+- Use **singular** nouns
+- Be specific and descriptive
+- Examples:
+  - ✅ `homeAddress`, `workAddress`
+  - ✅ `primaryGroup`, `manager`, `mentor`
+  - ✅ `profile`, `avatar`, `badge`
+  - ❌ `address` (ambiguous - which one?)
+  - ❌ `group` (which group?)
+
+#### To-Many Relationships (one-to-many)
+- Use **plural** nouns
+- Examples:
+  - ✅ `addresses`, `phoneNumbers`
+  - ✅ `orders`, `invoices`, `lineItems`
+  - ✅ `employees`, `members`, `participants`
+  - ❌ `address` (should be plural)
+
+### Reverse Navigation Names
+
+**Format:** Describes the relationship from the target's perspective.
+
+**Patterns:**
+
+1. **Possessive/For pattern:**
+   - Forward: `homeAddress` → Reverse: `homeAddressFor`
+   - Forward: `profile` → Reverse: `profileFor`
+
+2. **Role pattern:**
+   - Forward: `manager` → Reverse: `directs` (manager directs employees)
+   - Forward: `primaryGroup` → Reverse: `members` (group has members)
+   - Forward: `mentor` → Reverse: `mentees` (mentor has mentees)
+
+3. **Owner pattern:**
+   - Forward: `addresses` → Reverse: `owner` (address has an owner)
+   - Forward: `orders` → Reverse: `customer` (order belongs to customer)
+
+### Naming Examples
+
+| Forward | Cardinality | Reverse | Notes |
+|---------|-------------|---------|-------|
+| `homeAddress` | one-to-one | `homeAddressFor` | Possessive pattern |
+| `workAddress` | one-to-one | `workAddressFor` | Possessive pattern |
+| `primaryGroup` | many-to-one | `members` | Role pattern |
+| `manager` | many-to-one | `directs` | Role pattern (self-relation) |
+| `mentor` | many-to-one | `mentees` | Role pattern (self-relation) |
+| `addresses` | one-to-many | `owner` | Owner pattern |
+| `orders` | one-to-many | `customer` | Owner pattern |
+
+---
+
+## Complete Examples
+
+### Example 1: Regular Relationship (User → Address)
+
+Multiple relationships to the same target model with mixed cardinalities:
+
+```typespec
+@link(
+  Address,  // Target: different model
+  17,       // Island bits
+  20,       // Neighborhood bits
+  [
+    {
+      connector: 0,
+      name: "homeAddress",
+      cardinality: "one-to-one",
+      reverse: "homeAddressFor",
+      docs: "Primary residential address"
+    },
+    {
+      connector: 1,
+      name: "workAddress",
+      cardinality: "one-to-one",
+      // No reverse - forward navigation only
+      docs: "Professional office location"
+    },
+    {
+      connector: 2,
+      name: "addresses",
+      cardinality: "one-to-many",
+      reverse: "owner",
+      docs: "All additional addresses (vacation homes, etc.)"
+    }
+  ]
+)
+@array(TypeSequence.Users)
+model User {
+  @generator("id")
+  id: string;
+  
+  @generator("compositeUserName")
+  name: string;
+}
+```
+
+**Generated methods:**
+```go
+// Forward navigation
+func (ul *UserLink) HomeAddress() *Address     // O(1)
+func (ul *UserLink) WorkAddress() *Address     // O(1)
+func (ul *UserLink) Addresses() iter           // O(6) - connectors 2-7
+
+// Reverse navigation
+func (al *AddressLink) HomeAddressFor() *User  // O(1)
+func (al *AddressLink) Owner() *User           // O(1)
+```
+
+### Example 2: Self-Referencing Relationship (User → User)
+
+Organizational hierarchy with manager relationship:
+
+```typespec
+@link(
+  User,     // Target: same model (self-relation)
+  17,       // Island bits
+  20,       // Neighborhood bits
+  [
+    {
+      connector: 0,
+      name: "manager",
+      cardinality: "many-to-one",
+      reverse: "directs",
+      distance: 1,  // ✅ Required for self-relations!
+      docs: "Direct manager in reporting hierarchy"
+    }
+  ]
+)
+@array(TypeSequence.Users)
+model User {
+  @generator("id")
+  id: string;
+  
+  @generator("compositeUserName")
+  name: string;
+}
+```
+
+**Generated methods:**
+```go
+// Forward navigation (employee → manager)
+func (ul *UserLink) Manager() *User            // O(1)
+
+// Reverse navigation (manager → employees)
+func (ul *UserLink) Directs() iter             // O(8) - all connectors
+```
+
+### Example 3: Multiple Self-Relations
+
+Complex organizational structure with multiple relationship types:
+
+```typespec
+@link(
+  User,
+  17,
+  20,
+  [
+    {
+      connector: 0,
+      name: "manager",
+      cardinality: "many-to-one",
+      reverse: "directs",
+      distance: 1,  // First parallel neighborhood
+      docs: "Direct manager in formal reporting structure"
+    },
+    {
+      connector: 1,
+      name: "mentor",
+      cardinality: "many-to-one",
+      reverse: "mentees",
+      distance: 3,  // Second parallel neighborhood
+      docs: "Career development mentor (informal relationship)"
+    },
+    {
+      connector: 2,
+      name: "buddy",
+      cardinality: "many-to-one",
+      distance: 5,  // Third parallel neighborhood
+      docs: "Onboarding buddy for new employees"
+    }
+  ]
+)
+@array(TypeSequence.Users)
+model User {
+  @generator("id")
+  id: string;
+  
+  @generator("compositeUserName")
+  name: string;
+}
+```
+
+**How it works:**
+```
+Your Index: Island=1, Neighborhood=1000, Connector=?
+
+Navigate to manager:  → N=1001 (1000 XOR 1), C=0
+Navigate to mentor:   → N=1003 (1000 XOR 3), C=1
+Navigate to buddy:    → N=1005 (1000 XOR 5), C=2
+
+Each relationship teleports to a unique parallel neighborhood!
+```
+
+### Example 4: Many-to-One with Reverse Iterator
+
+Group membership with bidirectional navigation:
+
+```typespec
+@link(
+  Group,
+  17,
+  15,       // Different neighborhood bits for cross-model relation
+  [
+    {
+      connector: 0,
+      name: "primaryGroup",
+      cardinality: "many-to-one",
+      reverse: "members",
+      docs: "User's primary group membership"
+    }
+  ]
+)
+@array(TypeSequence.Users)
+model User {
+  @generator("id")
+  id: string;
+  
+  @generator("compositeUserName")
+  name: string;
+}
+```
+
+**Usage:**
+```go
+// Forward: User → Group (many users belong to one group)
+users := pseudata.NewUserArray(42)
+userLink := users.LinkAt(100)
+group := userLink.PrimaryGroup()
+fmt.Printf("%s belongs to %s\n", userLink.Me().Name, group.Name)
+
+// Reverse: Group → Users (one group has many members)
+groups := pseudata.NewGroupArray(42)
+groupLink := groups.LinkAt(10)
+fmt.Printf("Members of %s:\n", groupLink.Me().Name)
+for member := range groupLink.Members() {
+    fmt.Printf("  - %s\n", member.Name)
+}
+```
+
+---
+
+## Testing Checklist
+
+After adding a new `@link` decorator, verify the following:
+
+### 1. Code Generation
+- [ ] Run TypeSpec compiler: `tsp compile .`
+- [ ] No compilation errors
+- [ ] Link classes generated in output directory
+- [ ] Array classes updated with Link factory methods
+- [ ] Check generated code for correct method signatures
+
+### 2. Forward Navigation
+- [ ] Forward navigation method exists on Link class
+- [ ] Method name matches `name` parameter
+- [ ] Returns correct type (single object or iterator)
+- [ ] Navigate from source to target successfully
+- [ ] Verify returned entity has correct properties
+
+### 3. Reverse Navigation (if specified)
+- [ ] Reverse navigation method exists on target's Link class
+- [ ] Method name matches `reverse` parameter
+- [ ] Returns correct type (single object or iterator)
+- [ ] Navigate from target back to source successfully
+- [ ] Verify bidirectional consistency
+
+### 4. Self-Relations (if applicable)
+- [ ] `distance` parameter is specified
+- [ ] No TypeSpec warnings about self-references
+- [ ] Forward navigation returns different entity (not self)
+- [ ] Reverse navigation returns expected entities
+- [ ] Test with various indices to ensure no self-references
+
+### 5. Cross-SDK Consistency
+- [ ] Generate code for all SDKs (Go, Python, TypeScript, Java)
+- [ ] Same worldSeed produces same relationships across SDKs
+- [ ] Method names follow language conventions (camelCase/snake_case)
+- [ ] Test vectors match across all implementations
+
+### 6. Edge Cases
+- [ ] Test with index 0
+- [ ] Test with maximum index
+- [ ] Test with indices at island boundaries
+- [ ] Test with empty iterators (one-to-many with no results)
+- [ ] Test with very large connector ranges
+
+### 7. Documentation
+- [ ] Add docstrings to relationship definitions
+- [ ] Update user-facing documentation if needed
+- [ ] Add examples to guides if introducing new pattern
+- [ ] Document any special considerations
+
+---
+
+## Common Mistakes
+
+### 1. Forgetting `distance` on Self-Relations
+
+**Problem:**
+```typespec
+@link(User, 17, 20, [
+  { connector: 0, name: "manager", cardinality: "many-to-one" }
+  // ❌ Missing distance parameter!
+])
+```
+
+**Solution:**
+```typespec
+@link(User, 17, 20, [
+  { connector: 0, name: "manager", cardinality: "many-to-one", distance: 1 }
+  // ✅ Distance prevents self-references
+])
+```
+
+### 2. Skipping Connector Numbers
+
+**Problem:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 0, name: "homeAddress", cardinality: "one-to-one" },
+  { connector: 5, name: "workAddress", cardinality: "one-to-one" }
+  // ❌ Skipped connectors 1-4 (wastes slots)
+])
+```
+
+**Solution:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 0, name: "homeAddress", cardinality: "one-to-one" },
+  { connector: 1, name: "workAddress", cardinality: "one-to-one" }
+  // ✅ Sequential connectors
+])
+```
+
+### 3. One-to-Many Not Last
+
+**Problem:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 0, name: "addresses", cardinality: "one-to-many" },
+  { connector: 1, name: "homeAddress", cardinality: "one-to-one" }
+  // ❌ One-to-many consumes connectors 0-7, blocking connector 1
+])
+```
+
+**Solution:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 0, name: "homeAddress", cardinality: "one-to-one" },
+  { connector: 1, name: "addresses", cardinality: "one-to-many" }
+  // ✅ One-to-many last, uses connectors 1-7
+])
+```
+
+### 4. Wrong Cardinality Choice
+
+**Problem:**
+```typespec
+@link(Group, 17, 15, [
+  { connector: 0, name: "primaryGroup", cardinality: "one-to-one" }
+  // ❌ Multiple users can share the same group!
+])
+```
+
+**Solution:**
+```typespec
+@link(Group, 17, 15, [
+  { connector: 0, name: "primaryGroup", cardinality: "many-to-one" }
+  // ✅ Many users, one group
+])
+```
+
+### 5. Inconsistent Island/Neighborhood Bits
+
+**Problem:**
+```typespec
+@link(Address, 17, 20, [...])  // User → Address with 17/20
+@link(User, 15, 18, [...])     // Address → User with 15/18
+// ❌ Different bit allocation for related models!
+```
+
+**Solution:**
+```typespec
+@link(Address, 17, 20, [...])  // User → Address with 17/20
+@link(User, 17, 20, [...])     // Address → User with 17/20 (same)
+// ✅ Consistent bit allocation
+```
+
+### 6. Singular Name for To-Many
+
+**Problem:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 2, name: "address", cardinality: "one-to-many" }
+  // ❌ Singular name for multiple addresses
+])
+```
+
+**Solution:**
+```typespec
+@link(Address, 17, 20, [
+  { connector: 2, name: "addresses", cardinality: "one-to-many" }
+  // ✅ Plural name for multiple addresses
+])
+```
+
+### 7. Exceeding 40-Bit Limit
+
+**Problem:**
+```typespec
+@link(Address, 25, 20, [...])
+// ❌ 25 + 20 = 45 bits (exceeds 40-bit limit!)
+```
+
+**Solution:**
+```typespec
+@link(Address, 17, 20, [...])
+// ✅ 17 + 20 = 37 bits, leaving 3 connector bits
+```
+
+---
+
+## Troubleshooting
+
+### Warning: "Self-relation may cause self-references"
+
+**Cause:** You defined a self-referencing relationship without the `distance` parameter.
+
+**Solution:** Add `distance: 1` (or another non-zero value):
+```typespec
+{ connector: 0, name: "manager", distance: 1, cardinality: "many-to-one" }
+```
+
+### Warning: "distance: 0 allows self-references (intentional?)"
+
+**Cause:** You explicitly set `distance: 0` on a self-relation.
+
+**Solution:** Either:
+- Change to `distance: 1` if you want to prevent self-references (typical case)
+- Keep `distance: 0` if you intentionally want to allow self-references (rare)
+
+### Error: "Connector out of bounds"
+
+**Cause:** Connector value exceeds maximum based on bit allocation.
+
+**Solution:** 
+- Calculate maxConnector: `2^(40 - islandBits - neighborhoodBits) - 1`
+- Use connector values within range: `0` to `maxConnector`
+- Example: With 3 connector bits, use 0-7 only
+
+### Error: "islandBits + neighborhoodBits exceeds 40"
+
+**Cause:** Bit allocation exceeds index limit.
+
+**Solution:** Reduce either `islandBits` or `neighborhoodBits`:
+```typespec
+@link(Address, 17, 20, [...])  // ✅ 37 bits total
+@link(Address, 15, 15, [...])  // ✅ 30 bits total
+@link(Address, 25, 20, [...])  // ❌ 45 bits - too many!
+```
+
+### Method not found in generated code
+
+**Cause:** Typo in `name` or `reverse` parameter, or code not regenerated.
+
+**Solution:**
+1. Check spelling in TypeSpec definition
+2. Regenerate code: `tsp compile .`
+3. Verify method name follows language conventions (camelCase for Go/TS/Java, snake_case for Python)
+
+### Reverse navigation returns wrong entities
+
+**Cause:** Distance mismatch or incorrect cardinality.
+
+**Solution:**
+- For self-relations: Ensure forward and reverse use same `distance` value
+- For reverse iterators: Verify cardinality is set correctly
+- Test with known indices to debug relationship
+
+### Different results across SDKs
+
+**Cause:** Different worldSeed or inconsistent bit allocation.
+
+**Solution:**
+1. Use same worldSeed across all SDKs
+2. Verify `islandBits` and `neighborhoodBits` match exactly
+3. Check connector values are identical
+4. Regenerate all SDK code from same TypeSpec definition
+
+---
+
+## Quick Reference
+
+### Decision Matrix
+
+| Scenario | Cardinality | Connector Strategy | Distance |
+|----------|-------------|-------------------|----------|
+| User has one home address | `one-to-one` | connector: 0 | Omit (default: 0) |
+| User has one work address | `one-to-one` | connector: 1 | Omit (default: 0) |
+| Many users in one group | `many-to-one` | connector: 0 | Omit (default: 0) |
+| User has many addresses | `one-to-many` | connector: 2+ | Omit (default: 0) |
+| User → manager (self) | `many-to-one` | connector: 0 | **distance: 1** ✅ |
+| Multiple self-relations | `many-to-one` | connectors: 0, 1, 2 | **distances: 1, 3, 5** ✅ |
+
+### Bit Allocation Examples
+
+| Island Bits | Neighborhood Bits | Connector Bits | Max Connectors | Use Case |
+|-------------|-------------------|----------------|----------------|----------|
+| 17 | 20 | 3 | 7 (0-7) | Standard same-model relations |
+| 17 | 15 | 8 | 255 (0-255) | Cross-model with many relationships |
+| 15 | 20 | 5 | 31 (0-31) | Smaller shards, more connectors |
+| 20 | 17 | 3 | 7 (0-7) | More shards, standard connectors |
+
+### Distance Values for Self-Relations
+
+| Number of Self-Relations | Recommended Distances | Example |
+|--------------------------|----------------------|---------|
+| 1 | `1` | manager: 1 |
+| 2 | `1, 3` | manager: 1, mentor: 3 |
+| 3 | `1, 3, 5` | manager: 1, mentor: 3, buddy: 5 |
+| 4 | `1, 3, 5, 7` | manager: 1, mentor: 3, buddy: 5, sponsor: 7 |
+
+**Why odd numbers?** Odd numbers provide good XOR distribution and minimize collisions in parallel neighborhoods.
+
+### Navigation Performance Reference
+
+| Method Type | Performance | Cardinality | Example |
+|-------------|-------------|-------------|----------|
+| Forward (to-one) | O(1) | `one-to-one` | `homeAddress()` |
+| Forward (to-one) | O(1) | `many-to-one` | `primaryGroup()`, `manager()` |
+| Forward (to-many) | O(2^connectorBits) | `one-to-many` | `addresses()` (typically 8 iterations) |
+| Reverse (to-one) | O(1) | Reverse of one-to-one | `homeAddressFor()` |
+| Reverse (to-one) | O(1) | Reverse of one-to-many | `owner()` |
+| Reverse (to-many) | O(2^connectorBits) | Reverse of many-to-one | `members()`, `directs()` |
+
+**Note:** With default 3 connector bits, "to-many" operations iterate at most 8 times, making them effectively O(8) = O(1) in practice.
+
+---
+
+## See Also
+
+- **[@link Decorator Reference](../decorators/link.md)** - Complete API documentation
+- **[Using Relations Guide](../../../../website/src/content/docs/guides/using-relations.mdx)** - User-facing guide with examples
+- **[@array Decorator](../decorators/array.md)** - Model array generation
+- **[PseudoLink Architecture](../architecture/pseudo-link.md)** - Bitwise encoding internals
+
+---
+
+## Need Help?
+
+If you encounter issues not covered in this guide:
+
+1. Check the [Troubleshooting](#troubleshooting) section above
+2. Review existing `@link` examples in `poc/typespec/src/pseudata.tsp`
+3. Consult the [@link decorator reference](../decorators/link.md)
+4. Open a GitHub issue with your TypeSpec definition and error messages
+
+**Happy linking! 🔗**

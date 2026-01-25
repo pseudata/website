@@ -2,37 +2,7 @@
 title: "Add a New SDK"
 description: "Complete guide to implementing Pseudata support for a new programming language including TypeSpec emitters, generator, and fixture-based tests"
 sidebar:
-  order: 5
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": "Add a New SDK to Pseudata",
-        "description": "Complete guide to implementing Pseudata support for a new programming language including TypeSpec emitters, generator, and fixture-based tests",
-        "author": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/contributing/add-new-sdk/"
-        },
-        "keywords": ["contributing", "new language", "TypeSpec", "emitters", "PCG32", "fixture tests"]
-      }
+  order: 6
 ---
 
 This guide walks through adding support for a new programming language (e.g., Rust, C#, PHP, Ruby) to Pseudata. Use the existing implementations (Go, Java, Python, TypeScript) as reference.
@@ -897,7 +867,7 @@ impl UserArray {
 **Reference**:
 
 - Go: `id_utils.go`
-- Documentation: [PseudoID](/reference/pseudo-ids/)
+- Documentation: [PseudoID](/advanced/pseudo-ids/)
 
 **Bit Layout** (128-bit UUID v8):
 

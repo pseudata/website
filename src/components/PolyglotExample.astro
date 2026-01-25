@@ -1,0 +1,37 @@
+---
+import { Tabs, TabItem, Code } from "@astrojs/starlight/components";
+
+interface Props {
+  id: string; // e.g., 'generator'
+}
+
+const { id } = Astro.props;
+
+// Eagerly load source code files only
+const goFiles = import.meta.glob("/src/examples/**/main.go", { query: "?raw", import: "default", eager: true });
+const javaFiles = import.meta.glob("/src/examples/**/Main.java", { query: "?raw", import: "default", eager: true });
+const pythonFiles = import.meta.glob("/src/examples/**/main.py", { query: "?raw", import: "default", eager: true });
+const tsFiles = import.meta.glob("/src/examples/**/main.ts", { query: "?raw", import: "default", eager: true });
+
+const getRaw = (glob: Record<string, any>, filename: string) => {
+  const path = `/src/examples/${id}/${filename}`;
+  return (glob[path] as string) || `// ${filename} not found for example '${id}'`;
+};
+---
+
+<p><strong>Source Codes</strong></p>
+
+<Tabs syncKey="code-language">
+  <TabItem label="Go">
+    <Code code={getRaw(goFiles, "main.go")} lang="go" />
+  </TabItem>
+  <TabItem label="Java">
+    <Code code={getRaw(javaFiles, "Main.java")} lang="java" />
+  </TabItem>
+  <TabItem label="Python">
+    <Code code={getRaw(pythonFiles, "main.py")} lang="python" />
+  </TabItem>
+  <TabItem label="TypeScript">
+    <Code code={getRaw(tsFiles, "main.ts")} lang="typescript" />
+  </TabItem>
+</Tabs>

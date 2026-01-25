@@ -3,36 +3,6 @@ title: "Your Mock Data Lies"
 description: "How to generate identical test data across Go, Python, TypeScript, and Java with mathematical precision"
 author: "Iván Szkiba"
 date: "2025-12-18"
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "Article",
-        "headline": "Your Mock Data Lies",
-        "description": "How to generate identical test data across Go, Python, TypeScript, and Java with mathematical precision",
-        "author": {
-          "@type": "Person",
-          "name": "Iván Szkiba"
-        },
-        "datePublished": "2025-12-18",
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/blog/introduction/"
-        },
-        "keywords": ["mock data", "testing", "cross-language", "PCG32", "faker", "deterministic", "polyglot"]
-      }
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
@@ -98,7 +68,7 @@ The goal is simple but ambitious: **To create an algorithm specification for moc
 
 ### How It Works in Practice
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     package main
@@ -201,7 +171,7 @@ While the libraries are not yet released, you can follow development progress an
 
 **Installation (when released):**
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">```bash go get github.com/pseudata/pseudata ```</TabItem>
 
 <TabItem label="Java">
@@ -223,7 +193,7 @@ While the libraries are not yet released, you can follow development progress an
 
 - [Documentation](https://pseudata.dev)
 - [GitHub Organization](https://github.com/pseudata)
-- [Technical Concept](https://pseudata.dev/reference/concept/)
+- [Technical Concept](https://pseudata.dev/advanced/concept/)
 - [Get Started Guide](https://pseudata.dev/guides/get-started/)
 
 ## What's Next?

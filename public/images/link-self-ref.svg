@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 160" width="480" height="160">
+  <!-- Manager (top) -->
+  <rect x="180" y="15" width="120" height="45" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="2"/>
+  <text x="240" y="34" font-family="sans-serif" font-size="14" fill="#2e7d32" text-anchor="middle" font-weight="bold">User</text>
+  <text x="240" y="50" font-family="sans-serif" font-size="10" fill="#2e7d32" text-anchor="middle">manager() / directs()</text>
+
+  <!-- Arrow definitions -->
+  <defs>
+    <marker id="arrow-down" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#9c27b0" />
+    </marker>
+    <marker id="arrow-up" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#ff9800" />
+    </marker>
+  </defs>
+
+  <!-- Downward arrows to reports (purple) -->
+  <line x1="200" y1="60" x2="85" y2="95" stroke="#9c27b0" stroke-width="2" marker-end="url(#arrow-down)"/>
+  <line x1="236" y1="60" x2="236" y2="95" stroke="#9c27b0" stroke-width="2" marker-end="url(#arrow-down)"/>
+  <line x1="272" y1="60" x2="387" y2="95" stroke="#9c27b0" stroke-width="2" marker-end="url(#arrow-down)"/>
+
+  <!-- Direct Report 1 -->
+  <rect x="25" y="95" width="120" height="45" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="2"/>
+  <text x="85" y="114" font-family="sans-serif" font-size="14" fill="#2e7d32" text-anchor="middle" font-weight="bold">User</text>
+  <text x="85" y="130" font-family="sans-serif" font-size="10" fill="#2e7d32" text-anchor="middle">manager() / directs()</text>
+
+  <!-- Direct Report 2 -->
+  <rect x="180" y="95" width="120" height="45" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="2"/>
+  <text x="240" y="114" font-family="sans-serif" font-size="14" fill="#2e7d32" text-anchor="middle" font-weight="bold">User</text>
+  <text x="240" y="130" font-family="sans-serif" font-size="10" fill="#2e7d32" text-anchor="middle">manager() / directs()</text>
+
+  <!-- Direct Report 3 -->
+  <rect x="335" y="95" width="120" height="45" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="2"/>
+  <text x="395" y="114" font-family="sans-serif" font-size="14" fill="#2e7d32" text-anchor="middle" font-weight="bold">User</text>
+  <text x="395" y="130" font-family="sans-serif" font-size="10" fill="#2e7d32" text-anchor="middle">manager() / directs()</text>
+
+  <!-- Upward arrow from middle report back to manager (orange, dashed, offset) -->
+  <line x1="247" y1="95" x2="247" y2="65" stroke="#ff9800" stroke-width="2" marker-end="url(#arrow-up)" stroke-dasharray="5,3"/>
+</svg>

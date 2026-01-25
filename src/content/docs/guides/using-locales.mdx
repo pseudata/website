@@ -3,36 +3,6 @@ title: "Using Locales"
 description: "Practical guide to selecting and using locale bundles for optimized bundle sizes"
 sidebar:
   order: 4
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": "Using Locales in Pseudata",
-        "description": "Practical guide to selecting and using locale bundles for optimized bundle sizes",
-        "author": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/guides/using-locales/"
-        },
-        "keywords": ["locales", "bundles", "i18n", "optimization", "memory"]
-      }
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
@@ -69,7 +39,7 @@ Pseudata organizes locale data into **bundles**—collections of related locales
 
 By default, Pseudata loads only the **US bundle** (which currently contains only `en_us` locale). This means you can start using Pseudata immediately without any configuration:
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     package main
@@ -183,7 +153,7 @@ By default, Pseudata loads only the **US bundle** (which currently contains only
 
 Import a bundle and pass it via options to use locales from that region.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import (

@@ -2,37 +2,7 @@
 title: "Models"
 description: "Reference for data models and their array generators in Pseudata"
 sidebar:
-  order: 7
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": "Models - Pseudata",
-        "description": "Reference for data models and their array generators in Pseudata",
-        "author": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/reference/models/"
-        },
-        "keywords": ["models", "API reference", "data structures", "documentation"]
-      }
+  order: 1
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
@@ -47,6 +17,242 @@ Models are accessed through pseudo-arrays that provide $O(1)$ random access to i
 objects. Each array is seeded with a world seed for deterministic generation.
 
 Each model type has a unique TypeSequence identifier used in PseudoIDs to distinguish object types.
+
+## Address
+
+Address object following OpenID Connect (OIDC) Address Claim.
+
+Represents a physical mailing address with components for
+street address, locality (city), region (state/province),
+postal code, country, and locale.
+
+**TypeSequence:** `110`
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Deterministic, sortable PseudoID for this address object. |
+| `formatted` | `string` | Full mailing address, formatted for display or use on a mailing label. |
+| `street_address` | `string` | Full street address component, may include house number, street name, |
+| `locality` | `string` | City or locality component. |
+| `region` | `string` | State, province, prefecture, or region component. |
+| `postal_code` | `string` | Zip code or postal code component. |
+| `country` | `string` | Country name or code component. |
+| `locale` | `string` | Locale associated with the address. |
+---
+
+### AddressLink
+
+The `AddressLink` class provides type-safe navigation methods for relationships between Address objects and related entities.
+
+**Methods:**
+
+- `me(): Address` - Returns the current Address object
+- `homeAddressFor(): User` - Reverse of `homeAddress()` on User ($O(1)$ access)
+- `owner(): User` - Reverse of `addresses()` on User ($O(1)$ access)
+
+**Usage:**
+
+<Tabs syncKey="code-language">
+  <TabItem label="Go">
+    ```go
+    addresss := NewAddressArray(worldSeed)
+    link := addresss.LinkAt(index)
+    address := link.Me()
+    related := link.HomeAddressFor()
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    AddressArray addresss = new AddressArray(worldSeed);
+    AddressLink link = addresss.linkAt(index);
+    Address address = link.me();
+    User related = link.homeAddressFor();
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    addresss = AddressArray(world_seed)
+    link = addresss.link_at(index)
+    address = link.me()
+    related = link.homeAddressFor()
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    const addresss = new AddressArray(worldSeed);
+    const link = addresss.linkAt(index);
+    const address = link.me();
+    const related = link.homeAddressFor();
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+### AddressArray
+
+pseudo-array providing $O(1)$ access to infinite Address objects.
+
+**Usage:**
+
+<Tabs syncKey="code-language">
+  <TabItem label="Go">
+    ```go
+    addresss := NewAddressArray(worldSeed)
+    address := addresss.At(index)
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    AddressArray addresss = new AddressArray(worldSeed);
+    Address address = addresss.at(index);
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    addresss = AddressArray(world_seed)
+    address = addresss.at(index)
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    const addresss = new AddressArray(worldSeed);
+    const address = addresss.at(index);
+    ```
+  </TabItem>
+</Tabs>
+
+**Methods:**
+
+- `at(index: int): Address` - Get Address at specified index ($O(1)$ access)
+- `constructor(worldSeed: uint64)` - Create array with given world seed
+- `linkAt(index: int): AddressLink` - Get AddressLink for relationship navigation at specified index
+- `linkFor(obj: Address): AddressLink` - Get AddressLink for a given Address object
+
+---
+
+## Group
+
+Group object representing a simple named group.
+
+Used to model collections of users, teams, or other entities with a single group name.
+The group name is generated as a deterministic, human-friendly nickname.
+
+This model is intentionally minimal, but can be extended to include additional group attributes as needed.
+
+**TypeSequence:** `102`
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Deterministic, sortable pseudo-id for this group object. |
+| `name` | `string` | Deterministic, human-friendly group name. |
+---
+
+### GroupLink
+
+The `GroupLink` class provides type-safe navigation methods for relationships between Group objects and related entities.
+
+**Methods:**
+
+- `me(): Group` - Returns the current Group object
+- `members(): Generator<User>` - Reverse of `primaryGroup()` on User (iterates through related objects, $O(connector\_bits)$)
+
+**Usage:**
+
+<Tabs syncKey="code-language">
+  <TabItem label="Go">
+    ```go
+    groups := NewGroupArray(worldSeed)
+    link := groups.LinkAt(index)
+    group := link.Me()
+    related := link.Members()
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    GroupArray groups = new GroupArray(worldSeed);
+    GroupLink link = groups.linkAt(index);
+    Group group = link.me();
+    User related = link.members();
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    groups = GroupArray(world_seed)
+    link = groups.link_at(index)
+    group = link.me()
+    related = link.members()
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    const groups = new GroupArray(worldSeed);
+    const link = groups.linkAt(index);
+    const group = link.me();
+    const related = link.members();
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+### GroupArray
+
+pseudo-array providing $O(1)$ access to infinite Group objects.
+
+**Usage:**
+
+<Tabs syncKey="code-language">
+  <TabItem label="Go">
+    ```go
+    groups := NewGroupArray(worldSeed)
+    group := groups.At(index)
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    GroupArray groups = new GroupArray(worldSeed);
+    Group group = groups.at(index);
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    groups = GroupArray(world_seed)
+    group = groups.at(index)
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    const groups = new GroupArray(worldSeed);
+    const group = groups.at(index);
+    ```
+  </TabItem>
+</Tabs>
+
+**Methods:**
+
+- `at(index: int): Group` - Get Group at specified index ($O(1)$ access)
+- `constructor(worldSeed: uint64)` - Create array with given world seed
+- `linkAt(index: int): GroupLink` - Get GroupLink for relationship navigation at specified index
+- `linkFor(obj: Group): GroupLink` - Get GroupLink for a given Group object
+
+---
 
 ## User
 
@@ -81,6 +287,65 @@ name components, contact details, gender, locale, and profile picture.
 | `phone_number` | `string` | End-User's preferred telephone number. |
 | `phone_number_verified` | `boolean` | True if the End-User's phone number has been verified; otherwise false. |
 | `updated_at` | `safeint` | Time the End-User's information was last updated. |
+---
+
+### UserLink
+
+The `UserLink` class provides type-safe navigation methods for relationships between User objects and related entities.
+
+**Methods:**
+
+- `me(): User` - Returns the current User object
+- `manager(): User` - Navigates to related User (many-to-one) ($O(1)$ access)
+- `directs(): Generator<User>` - Reverse of `manager()` (iterates through related objects, $O(connector\_bits)$)
+- `primaryGroup(): Group` - Navigates to related Group (many-to-one) ($O(1)$ access)
+- `members(): Generator<User>` - Reverse of `primaryGroup()` (iterates through related objects, $O(connector\_bits)$)
+- `homeAddress(): Address` - The primary residential location where the user lives and receives personal mail. ($O(1)$ access)
+- `homeAddressFor(): User` - Reverse of `homeAddress()` ($O(1)$ access)
+- `workAddress(): Address` - The professional office or job site location where the user is stationed during business hour. ($O(1)$ access)
+- `addresses(): Generator<Address>` - A list of supplemental or miscellaneous locations associated with the user, such as temporary vacation rentals, secondary properties, or old historical records. (iterates through related objects, $O(connector\_bits)$)
+- `owner(): User` - Reverse of `addresses()` ($O(1)$ access)
+- `directs(): Generator<User>` - Reverse of `manager()` on User (iterates through related objects, $O(connector\_bits)$)
+
+**Usage:**
+
+<Tabs syncKey="code-language">
+  <TabItem label="Go">
+    ```go
+    users := NewUserArray(worldSeed)
+    link := users.LinkAt(index)
+    user := link.Me()
+    related := link.Manager()
+    ```
+  </TabItem>
+
+  <TabItem label="Java">
+    ```java
+    UserArray users = new UserArray(worldSeed);
+    UserLink link = users.linkAt(index);
+    User user = link.me();
+    User related = link.manager();
+    ```
+  </TabItem>
+
+  <TabItem label="Python">
+    ```python
+    users = UserArray(world_seed)
+    link = users.link_at(index)
+    user = link.me()
+    related = link.manager()
+    ```
+  </TabItem>
+
+  <TabItem label="TypeScript">
+    ```typescript
+    const users = new UserArray(worldSeed);
+    const link = users.linkAt(index);
+    const user = link.me();
+    const related = link.manager();
+    ```
+  </TabItem>
+</Tabs>
 
 ---
 
@@ -90,7 +355,7 @@ pseudo-array providing $O(1)$ access to infinite User objects.
 
 **Usage:**
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     users := NewUserArray(worldSeed)
@@ -124,137 +389,8 @@ pseudo-array providing $O(1)$ access to infinite User objects.
 
 - `at(index: int): User` - Get User at specified index ($O(1)$ access)
 - `constructor(worldSeed: uint64)` - Create array with given world seed
-
----
-
-## Address
-
-Address object following OpenID Connect (OIDC) Address Claim.
-
-Represents a physical mailing address with components for
-street address, locality (city), region (state/province),
-postal code, country, and locale.
-
-**TypeSequence:** `110`
-
-### Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Deterministic, sortable PseudoID for this address object. |
-| `formatted` | `string` | Full mailing address, formatted for display or use on a mailing label. |
-| `street_address` | `string` | Full street address component, may include house number, street name, |
-| `locality` | `string` | City or locality component. |
-| `region` | `string` | State, province, prefecture, or region component. |
-| `postal_code` | `string` | Zip code or postal code component. |
-| `country` | `string` | Country name or code component. |
-| `locale` | `string` | Locale associated with the address. |
-
----
-
-### AddressArray
-
-pseudo-array providing $O(1)$ access to infinite Address objects.
-
-**Usage:**
-
-<Tabs>
-  <TabItem label="Go">
-    ```go
-    addresss := NewAddressArray(worldSeed)
-    address := addresss.At(index)
-    ```
-  </TabItem>
-
-  <TabItem label="Java">
-    ```java
-    AddressArray addresss = new AddressArray(worldSeed);
-    Address address = addresss.at(index);
-    ```
-  </TabItem>
-
-  <TabItem label="Python">
-    ```python
-    addresss = AddressArray(world_seed)
-    address = addresss.at(index)
-    ```
-  </TabItem>
-
-  <TabItem label="TypeScript">
-    ```typescript
-    const addresss = new AddressArray(worldSeed);
-    const address = addresss.at(index);
-    ```
-  </TabItem>
-</Tabs>
-
-**Methods:**
-
-- `at(index: int): Address` - Get Address at specified index ($O(1)$ access)
-- `constructor(worldSeed: uint64)` - Create array with given world seed
-
----
-
-## Group
-
-Group object representing a simple named group.
-
-Used to model collections of users, teams, or other entities with a single group name.
-The group name is generated as a deterministic, human-friendly nickname.
-
-This model is intentionally minimal, but can be extended to include additional group attributes as needed.
-
-**TypeSequence:** `102`
-
-### Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Deterministic, sortable pseudo-id for this group object. |
-| `name` | `string` | Deterministic, human-friendly group name. |
-
----
-
-### GroupArray
-
-pseudo-array providing $O(1)$ access to infinite Group objects.
-
-**Usage:**
-
-<Tabs>
-  <TabItem label="Go">
-    ```go
-    groups := NewGroupArray(worldSeed)
-    group := groups.At(index)
-    ```
-  </TabItem>
-
-  <TabItem label="Java">
-    ```java
-    GroupArray groups = new GroupArray(worldSeed);
-    Group group = groups.at(index);
-    ```
-  </TabItem>
-
-  <TabItem label="Python">
-    ```python
-    groups = GroupArray(world_seed)
-    group = groups.at(index)
-    ```
-  </TabItem>
-
-  <TabItem label="TypeScript">
-    ```typescript
-    const groups = new GroupArray(worldSeed);
-    const group = groups.at(index);
-    ```
-  </TabItem>
-</Tabs>
-
-**Methods:**
-
-- `at(index: int): Group` - Get Group at specified index ($O(1)$ access)
-- `constructor(worldSeed: uint64)` - Create array with given world seed
+- `linkAt(index: int): UserLink` - Get UserLink for relationship navigation at specified index
+- `linkFor(obj: User): UserLink` - Get UserLink for a given User object
 
 ---
 

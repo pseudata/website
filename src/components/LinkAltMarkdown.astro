@@ -1,0 +1,8 @@
+---
+// Get current URL and remove trailing slash, then add .md
+const { pathname } = Astro.url;
+const cleanPath = pathname === "/" ? "/index" : pathname.replace(/\/$/, "");
+const mdUrl = new URL(cleanPath + ".md", Astro.site);
+---
+
+<link rel="alternate" type="text/markdown" href={mdUrl} title="Raw Markdown content" />

@@ -3,36 +3,6 @@ title: "Pseudo-IDs"
 description: "Deterministic, sortable, self-describing identifiers for pseudo-arrays that encode world-seed, type-sequence, and index"
 sidebar:
   order: 3
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: |
-      {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": "Pseudo-IDs",
-        "description": "Deterministic, sortable, self-describing identifiers for pseudo-array that encode world-seed, type-sequence, and index",
-        "author": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Pseudata",
-          "url": "https://pseudata.dev",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://pseudata.dev/logo-light.svg"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": "https://pseudata.dev/reference/pseudo-ids/"
-        },
-        "keywords": ["pseudo-id", "object id", "UUID", "deterministic", "sortable", "identifiers", "pseudo-array"]
-      }
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
@@ -67,7 +37,7 @@ These limits are designed to handle virtually any real-world use case.
 
 The *world-seed* is the base seed you provide when creating a PseudoArray. It defines the entire "world" or "universe" of generated data.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
 
     ```go
@@ -136,7 +106,7 @@ The *type-sequence* (`typeSeq`) identifies the _type_ of object. Each complex ty
 
 Note: TypeSeq uses 16 bits (0-65,535), with built-in types using 0-1023 and custom types starting from 1024.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
 
     ```go
@@ -204,7 +174,7 @@ This means you can identify an object's *type-sequence* just by looking at its *
 
 The **index** is the position of the object in its PseudoArray. It represents the "creation order" within that type.
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     users := pseudata.NewUserArray(42)
@@ -269,7 +239,7 @@ The **index** is the position of the object in its PseudoArray. It represents th
 The *index* can range from 0 to 1,099,511,627,775 (40 bits), supporting over 1.1 trillion unique objects per type.
 
 :::tip[Advanced: Relational Indices with Pseudo Links]
-The 40-bit index is just a number (0 to 1.1 trillion) - any value is valid. A *pseudo-link* provides a coordinate system for manipulating those 40 bits through bitwise operations. The `PseudoLink` class divides the 40 bits into configurable zones (island, connector, neighborhood) and provides functions to construct indices with specific coordinate properties and navigate between related indices. The bit layout is configurable based on your requirements. See the [PseudoLink documentation](/reference/pseudo-links/) for details on using indices as coordinates.
+The 40-bit index is just a number (0 to 1.1 trillion) - any value is valid. A *pseudo-link* provides a coordinate system for manipulating those 40 bits through bitwise operations. The `PseudoLink` class divides the 40 bits into configurable zones (island, connector, neighborhood) and provides functions to construct indices with specific coordinate properties and navigate between related indices. The bit layout is configurable based on your requirements. See the [PseudoLink documentation](/advanced/pseudo-links/) for details on using indices as coordinates.
 :::
 
 ## How Pseudo IDs Work
@@ -344,7 +314,7 @@ This makes PseudoIDs perfect for:
 
 Every generated object has an `id()` method:
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
   
     ```go
@@ -408,7 +378,7 @@ Every generated object has an `id()` method:
 
 You can generate PseudoIDs directly using utility functions:
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
   
     ```go
@@ -477,7 +447,7 @@ You can generate PseudoIDs directly using utility functions:
 
 Extract the components from any *pseudo-id*:
 
-<Tabs>
+<Tabs syncKey="code-language">
   <TabItem label="Go">
     ```go
     import "github.com/pseudata/pseudata"
@@ -751,4 +721,4 @@ public boolean isValidProductionUser(String userId) {
 
 ## See Also
 
-- **[PseudoLink](/reference/pseudo-links/)** - Learn how to use the 40-bit index as a coordinate system with configurable bit layouts for stateless $O(1)$ navigation between related indices
+- **[PseudoLink](/advanced/pseudo-links/)** - Learn how to use the 40-bit index as a coordinate system with configurable bit layouts for stateless $O(1)$ navigation between related indices

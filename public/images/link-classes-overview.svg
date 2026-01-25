@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220">
+  <!-- UserArray -->
+  <rect x="100" y="10" width="200" height="50" rx="8" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2"/>
+  <text x="200" y="40" font-family="sans-serif" font-size="14" fill="#6a1b9a" text-anchor="middle" font-weight="bold">UserArray</text>
+
+  <!-- Arrow definitions -->
+  <defs>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#9c27b0" />
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#7cb3d9" />
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#66bb6a" />
+    </marker>
+  </defs>
+
+  <!-- Left path: UserArray → UserLink → User -->
+  <line x1="170" y1="60" x2="170" y2="85" stroke="#9c27b0" stroke-width="2" marker-end="url(#arrow-purple)"/>
+
+  <!-- UserLink -->
+  <rect x="120" y="85" width="100" height="50" rx="8" fill="#e1f5ff" stroke="#7cb3d9" stroke-width="2"/>
+  <text x="170" y="115" font-family="sans-serif" font-size="14" fill="#1a5490" text-anchor="middle" font-weight="bold">UserLink</text>
+
+  <!-- Arrow from UserLink to User -->
+  <line x1="170" y1="135" x2="170" y2="160" stroke="#7cb3d9" stroke-width="2" marker-end="url(#arrow-blue)"/>
+
+  <!-- Right path: UserArray → User (direct) -->
+  <line x1="230" y1="60" x2="230" y2="160" stroke="#66bb6a" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <!-- User object -->
+  <rect x="120" y="160" width="160" height="50" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="2"/>
+  <text x="200" y="190" font-family="sans-serif" font-size="14" fill="#2e7d32" text-anchor="middle" font-weight="bold">User</text>
+</svg>

@@ -1,17 +1,24 @@
 import { defineConfig } from "astro/config";
+import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import starlightLlmsTxt from "starlight-llms-txt";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import path from "path";
 import { remarkStripH1 } from "./scripts/remark-strip-h1.mjs";
+import { excludedAIPaths } from "./src/ai.config";
+
+const site = "https://pseudata.dev";
 
 export default defineConfig({
-  site: "https://pseudata.dev",
+  site,
   server: {
     host: true,
   },
   integrations: [
+    sitemap({
+      customSitemaps: [`${site}/sitemap-ai.xml`],
+    }),
     starlight({
       title: "Pseudata",
       editLink: {
@@ -25,7 +32,7 @@ export default defineConfig({
       plugins: [
         starlightLlmsTxt({
           pageSeparator: "\n\n------\n\n",
-          exclude: ["contributing/**", "benchmarks/**", "glossary/**"],
+          exclude: excludedAIPaths,
           customSets: [
             {
               label: "Guides",

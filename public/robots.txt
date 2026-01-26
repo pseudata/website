@@ -1,25 +1,23 @@
+# General rules for all search engines
 User-agent: *
 Allow: /
+Sitemap: https://pseudata.dev/sitemap-index.xml
 
-# AI Search Engines
+# Specific rules for AI Agents & Search Engines
 User-agent: GPTBot
-Allow: /
 User-agent: ChatGPT-User
-Allow: /
+User-agent: ClaudeBot
+User-agent: Claude-Web
 User-agent: anthropic-ai
-Allow: /
 User-agent: PerplexityBot
-Allow: /
-
-# Training Data Crawlers
+User-agent: Google-Extended
+User-agent: Cohere-ai
 User-agent: CCBot
+User-agent: Omgilibot
 Allow: /
+Sitemap: https://pseudata.dev/sitemap-ai.xml
 
 # Standard Search Engines
 User-agent: Googlebot
-Allow: /
 User-agent: Bingbot
 Allow: /
-
-Sitemap: https://pseudata.dev/sitemap-index.xml
-

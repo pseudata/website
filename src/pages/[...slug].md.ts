@@ -129,7 +129,12 @@ export async function GET({ props, params }: { props: Props; params: { slug: str
   }
 
   return new Response(`# ${entry.data.title}\n\n${blockquote}${finalContent}`, {
-    headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `inline; filename="${currentSlug}.md"` },
+    headers: {
+      "Content-Type": "text/markdown; charset=utf-8",
+      "Content-Disposition": `inline; filename="${currentSlug}.md"`,
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET",
+    },
   });
 }
 

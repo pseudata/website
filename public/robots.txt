@@ -1,6 +1,7 @@
 # General rules for all search engines
 User-agent: *
 Allow: /
+Disallow: /_astro/
 Sitemap: https://pseudata.dev/sitemap-index.xml
 
 # Specific rules for AI Agents & Search Engines
@@ -15,9 +16,12 @@ User-agent: Cohere-ai
 User-agent: CCBot
 User-agent: Omgilibot
 Allow: /
+Disallow: /_astro/
 Sitemap: https://pseudata.dev/sitemap-ai.xml
 
 # Standard Search Engines
 User-agent: Googlebot
 User-agent: Bingbot
 Allow: /
+Disallow: /_astro/
+
